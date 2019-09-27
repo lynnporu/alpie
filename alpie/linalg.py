@@ -1,4 +1,5 @@
 from copy import deepcopy
+from math import floor, ceil
 class MultidimensionalMatrix:
 
     def __init__(self, dimensions=None, data=None):
@@ -169,4 +170,73 @@ class MultidimensionalMatrix:
 
     def __abs__(self):
         return self.mapWith(abs)
+
+    def __round__(self, n):
+        return self.mapWith(
+            lambda el: round(el, n))
+
+    def __floor__(self):
+        return self.mapWith(floor)
+
+    def __ceil__(self):
+        return self.mapWith(ceil)
+
+    def __int__(self):
+        return self.mapWith(int)
+
+    def __float__(self):
+        return self.mapWith(float)
+
+    def __complex__(self):
+        return self.mapWith(complex)
+
+    def __oct__(self):
+        return self.mapWith(oct)
+
+    def __hex__(self):
+        return self.mapWith(hex)
+
+    def __str__(self):
+        out = str()
+        for row in self.data:
+            out += str(row) + "\n"
+        return out
+
+    def __repr__(self):
+        return f"<MultidimensionalMatrix dimensions={self.dimensions}>"
+
+    def __len__(self):
+        """Returns size of dimensions.
+        """
+        return len(self.dimensions)
+
+    def __deepcopy__(self, memdict):
+        return type(self)(data=deepcopy(self.data))
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
+
+    def __hash__(self):
+        return int(
+            "".join(
+                map(
+                    lambda n: f'{n:03}',
+                    itertools.chain(self.dimensions, self.elements()))))
+
+    def wrapWith(self, cls):
+        """Create new exemplar of given class with data of current one.
+        """
+        return cls(data=self.data)
+
+    @property
+    def to2d(self):
+        """Returns Matrix with the same data.
+        """
+        if len(self.dimensions) != 2:
+            raise ValueError("This matrix is not 2-dimensional")
+
+        return Matrix(data=self.data)
 
