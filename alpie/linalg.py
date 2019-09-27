@@ -426,6 +426,15 @@ class AugmentedMatrix():
             f"variables={self.coeffs.dimensions[1]}>"
         )
 
+    def __getitem__(self, key):
+        return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
+
+    def __setitem__(self, key, item):
+        if type(item) is not AugmentedMatrixRow:
+            raise ValueError("Assigning item type must be AugmentedMatrixRow.")
+
+        self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
+
     def __len__(self):
         return self.coeffs.dimensions[0]
 
@@ -433,4 +442,33 @@ class AugmentedMatrix():
         return type(self)(
             coeffs=deepcopy(self.coeffs),
             eqs=deepcopy(self.eqs))
+
+class AugmentedMatrixRow:
+
+    def __init__(self, coeffs, eq):
+
+        self.coeffs = coeffs
+        self.eq = eq
+
+    def __getitem__(self, key):
+
+        if key <= len(self.coeffs) - 1:
+            return self.coeffs[key]
+
+        else:
+            return self.eq[0]
+
+    def __setitem__(self, key, item):
+
+        if key <= len(self.coeffs) - 1:
+            self.coeffs[key] = item
+
+        else:
+            self.eq[0] = item
+
+    def __str__(self):
+        return str(self.coeffs + self.eq)
+
+    def __repr__(self):
+        return f"<AugmentedMatrixRow data={str(self)}>"
 
