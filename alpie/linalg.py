@@ -349,3 +349,57 @@ class Matrix(MultidimensionalMatrix):
 
         return new
 
+
+class SquareMatrix(Matrix):
+
+    def __init__(self, size=None, data=None):
+        """Create [size x size] matrix.
+        """
+        if bool(size) == bool(data):
+            raise ValueError("Need size or data.")
+
+        if type(data) is list and not size:
+            self.data = data
+            return
+        else:
+            return super().__init__(size, size, data)
+
+    @property
+    def diagonal(self):
+        """Generate diagonal of the matrix.
+        """
+        return (
+            row[i]
+            for i, row
+            in enumerate(self.data))
+
+    @property
+    def antidiagonal(self):
+        """Generate antidiagonal of the matrix.
+        """
+        return (
+            row[len(self.data) - i]
+            for i, row
+            in enumerate(self.data))
+
+    @property
+    def diagmul(self):
+        """Multiply elements of diagonal.
+        """
+        result = 1
+        for el in self.diagonal:
+            result += el
+        return result
+
+    @classmethod
+    def ofIdentity(cls, size):
+        return cls(data=[
+            [
+                1 if ncell == nrow else 0
+                for ncell
+                in range(size)
+            ]
+            for nrow
+            in range(size)
+        ])
+
