@@ -450,6 +450,50 @@ class AugmentedMatrix():
             coeffs=deepcopy(self.coeffs),
             eqs=deepcopy(self.eqs))
 
+    @property
+    def gaussEliminated(self):
+        """Gaussian elimination.
+        """
+
+        new = deepcopy(self)
+        sign = 1
+
+        n = len(new)
+
+        for i in range(0, n - 1):
+            # Diagonal element.
+            x = abs(new[i][i])
+            maxRow = i
+            # Row sorting.
+            for k in range(i + 1, n):
+                if abs(new[k][i]) > x:
+                    x = abs(new[k][i])
+                    maxRow = k
+
+            if i != maxRow:
+                new[i], new[maxRow] = new[maxRow], new[i]
+                sign *= -1
+
+            if abs(new[i][i]) < 1e-12:
+                break
+
+            # Gaussian elimination
+            for k in range(i + 1, n):
+                c = -new[k][i] / new[i][i]
+                for j in range(i, n + 1):
+                    new[k][j] += c * new[i][j]
+
+        new.coeffs = TopTriangularMatrix(data=new.coeffs.data)
+        new.coeffs.sign = sign
+
+        return new
+
+    def gaussEliminate(self):
+        """Do Gaussian elimination on this matrix.
+        """
+
+        self = self.gaussEliminated
+
 class AugmentedMatrixRow:
 
     def __init__(self, coeffs, eq):
@@ -479,3 +523,15 @@ class AugmentedMatrixRow:
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
 
+
+class TopTriangularMatrix(SquareMatrix):
+
+    def __init__(self, data, sign=1):
+        self.sign = sign
+        self.data = data
+
+    def __repr__(self):
+        return f"<TopTriangularMatrix dimensions={self.data.dimensions}>"
+
+    def __setitem__(self, *args):
+        raise TypeError("Assigning is not allowed.")
