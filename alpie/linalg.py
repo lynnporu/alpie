@@ -559,5 +559,16 @@ class TopTriangularMatrix(SquareMatrix):
     def __repr__(self):
         return f"<TopTriangularMatrix dimensions={self.data.dimensions}>"
 
+    @classmethod
+    def byGauss(cls, matrix):
+        eliminated = AugmentedMatrix(coeffs=matrix).gaussEliminated
+        return cls(
+            data=eliminated.coeffs,
+            sign=eliminated.sign)
+
+    @property
+    def det(self):
+        return self.sign * self.diagmul
+
     def __setitem__(self, *args):
         raise TypeError("Assigning is not allowed.")
