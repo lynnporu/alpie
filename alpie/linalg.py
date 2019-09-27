@@ -95,3 +95,50 @@ class MultidimensionalMatrix:
 
         return flat(self.data)
 
+    def mapWith(self, function, new=True):
+        """Map elements of matrix with a given function and returns the result.
+        If new=True, original elements won't be changed.
+        """
+
+        matrix = self if not new else deepcopy(self)
+
+        return matrix.shape(
+            fillwith=list(map(
+                function, matrix.elements())),
+            dimensions=matrix.dimensions,
+            unpack=True)
+
+    def __mul__(self, other):
+        if not isinstance(other, numbers.Number):
+            raise ValueError("The second variable must be number.")
+
+        return self.mapWith(
+            lambda el: el * other)
+
+    def __add__(self, other):
+        if self.dimensions != other.dimensions:
+            raise ValueError("Matrices have not the same dimensions.")
+
+        return MultidimensionalMatrix.empty().shape(
+            fillwith=list(map(
+                sum, zip(
+                    self.elements(),
+                    other.elements()))),
+            dimensions=self.dimensions,
+            unpack=True)
+
+    def __sub__(self, other):
+        if self.dimensions != other.dimensions:
+            raise ValueError("Matrices have not the same dimensions.")
+
+        return MultidimensionalMatrix.empty().shape(
+            fillwith=list(map(
+                lambda pack: pack[0] - pack[1],
+                zip(
+                    self.elements(),
+                    other.elements()
+                )
+            )),
+            dimensions=self.dimensions,
+            unpack=True)
+
