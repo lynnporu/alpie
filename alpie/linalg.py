@@ -438,6 +438,13 @@ class AugmentedMatrix():
     def __len__(self):
         return self.coeffs.dimensions[0]
 
+    def __str__(self):
+        out = str()
+        for coeffs, equation in zip(self.coeffs, self.eqs):
+            out += "\t".join(map(str, coeffs)) + \
+                "\t|\t" + str(equation[0]) + "\n"
+        return out
+
     def __deepcopy__(self, memdict):
         return type(self)(
             coeffs=deepcopy(self.coeffs),
