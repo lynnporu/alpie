@@ -82,6 +82,25 @@ class MultidimensionalMatrix:
 
         return coords
 
+    def insertInto(self, coordinates: list, value, fillwith=None):
+        """Insert given value exactly into given coordinates. Enlarge matrix by
+        `fillwith` elements if it's coordinates are out of range.
+        """
+
+        def ensureIndex(array, index):
+            while len(array) <= index:
+                array.append(deepcopy(fillwith))
+            array[index] = list()
+
+        def insert(array, index, *tail):
+            ensureIndex(array, index)
+            if not tail:
+                array[index] = value
+            else:
+                insert(array[index], *tail)
+
+        insert(self.data, *coordinates)
+
     def elements(self):
         """Generates elements of matrix in the recursive order.
         """
