@@ -1,5 +1,9 @@
 from copy import deepcopy
 from math import floor, ceil
+import numbers
+import itertools
+
+
 class MultidimensionalMatrix:
 
     def __init__(self, dimensions=None, data=None):
@@ -239,4 +243,37 @@ class MultidimensionalMatrix:
             raise ValueError("This matrix is not 2-dimensional")
 
         return Matrix(data=self.data)
+
+
+class Matrix(MultidimensionalMatrix):
+
+    def __init__(self, height=None, width=None, data=None):
+        """Create [height x width] matrix.
+        """
+        if type(data) is list:
+            self.data = data
+        else:
+            return super().__init__([height, width], data)
+
+    def rows(self):
+        """Generate rows.
+        """
+        for row in self.data:
+            yield row
+
+    def columns(self):
+        """Generate columns.
+        """
+        for n in range(self.dimensions[1]):
+            yield [row[n] for row in self.data]
+
+    def getRow(self, n):
+        """Returns n-th row.
+        """
+        return self.data[n]
+
+    def getColumn(self, n):
+        """Returns n-th column.
+        """
+        return [row[n] for row in self.data]
 
