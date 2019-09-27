@@ -403,3 +403,34 @@ class SquareMatrix(Matrix):
             in range(size)
         ])
 
+class AugmentedMatrix():
+
+    def __init__(self, coeffs, eqs=None):
+        """Check A and B matrices and create augmented matrix.
+        """
+        if not eqs:
+            eqs = Matrix(data=[[1]] * coeffs.dimensions[0])
+
+        if not(type(coeffs) is type(eqs) is Matrix):
+            raise ValueError("Both parameters must be Matrix.")
+
+        if eqs.dimensions != [coeffs.dimensions[0], 1]:
+            raise ValueError("Incorrect system.")
+
+        self.coeffs = coeffs
+        self.eqs = eqs
+
+    def __repr__(self):
+        return (
+            f"<AugmentedMatrix equations={len(self.coeffs)} "
+            f"variables={self.coeffs.dimensions[1]}>"
+        )
+
+    def __len__(self):
+        return self.coeffs.dimensions[0]
+
+    def __deepcopy__(self, memdict):
+        return type(self)(
+            coeffs=deepcopy(self.coeffs),
+            eqs=deepcopy(self.eqs))
+
