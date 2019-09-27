@@ -277,3 +277,75 @@ class Matrix(MultidimensionalMatrix):
         """
         return [row[n] for row in self.data]
 
+    @property
+    def isSquare(self):
+        dimensions = self.dimensions
+        # Check if list has two elements and they are same.
+        return dimensions.count(dimensions[0]) == len(dimensions) == 2
+
+    def toSquare(self):
+        """Return SquareMatrix with the data of a current one.
+        """
+        if not self.isSquare:
+            raise TypeError("This matrix is not square.")
+
+        return SquareMatrix(data=self.data)
+
+    @property
+    def transposed(self):
+        return type(self)(data=[list(row) for row in zip(*self.data)])
+
+    def insertInto(value, coordinates, fillwith):
+        if len(coordinates) > 2:
+            raise ValueError("Such dimension can not exist in this matrix.")
+        else:
+            super().insertInto(value, coordinates, fillwith)
+
+    @property
+    def euclideanNorm(self):
+        return sum(
+            map(
+                lambda n: n ** 2,
+                self.elements())) ** .5
+
+    def __mul__(self, other):
+        # Try scalar multiplication.
+        try:
+            return (MultidimensionalMatrix(data=self.data) * other).to2d
+
+        # If not:
+        except ValueError:
+
+            if self.dimensions[1] != other.dimensions[0]:
+                raise ValueError("These matrices can not be multiplied.")
+
+            return Matrix(
+                data=[
+                    [
+                        sum(
+                            el1 * el2
+                            for el1, el2
+                            in zip(row1, col2)
+                        )
+                        for col2
+                        in zip(*other.data)
+                    ]
+                    for row1
+                    in self.data
+                ]
+            )
+
+    def __pow__(self, n):
+        if n == -1:
+            return self.inverse()
+        elif n < -1:
+            raise ValueError("Operation is not determined.")
+
+        new = deepcopy(self)
+
+        while n > 1:
+            n -= 1
+            new *= new
+
+        return new
+
