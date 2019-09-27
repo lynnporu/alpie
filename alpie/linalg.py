@@ -403,6 +403,11 @@ class SquareMatrix(Matrix):
             in range(size)
         ])
 
+
+class NotSolvable(Exception):
+    pass
+
+
 class AugmentedMatrix():
 
     def __init__(self, coeffs, eqs=None):
@@ -493,6 +498,27 @@ class AugmentedMatrix():
         """
 
         self = self.gaussEliminated
+
+    @property
+    def roots(self):
+        """Calculate roots out of eliminated matrix.
+        """
+
+        n = len(self)
+        x = []
+
+        for i in range(n - 1, -1, -1):
+
+            try:
+                x.insert(0, self[i][n] / self[i][i])
+            except ZeroDivisionError:
+                raise NotSolvable
+
+            for k in range(i - 1, -1, -1):
+                self[k][n] -= self[k][i] * x[0]
+
+        return x
+
 
 class AugmentedMatrixRow:
 
