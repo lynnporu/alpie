@@ -19,6 +19,14 @@ class MultidimensionalMatrix:
         else:
             raise ValueError("Check docstring for help.")
 
+    @classmethod
+    def sizedAs(cls, dimensions):
+        return cls(dimensions, None)
+
+    @classmethod
+    def filledWith(cls, data):
+        return cls(None, data)
+
     def shape(
         self, fillwith=None, dimensions=None, unpack=False,
         background=None
@@ -40,10 +48,11 @@ class MultidimensionalMatrix:
                     if not unpack:
                         array.append(deepcopy(fillwith))
                     else:
-                        if not fillwith:
-                            array.append(deepcopy(background))
-                        else:
-                            array.append(fillwith.pop(0))
+                        array.append(
+                            deepcopy(background)
+                            if not fillwith else
+                            fillwith.pop(0)
+                        )
 
                 # Unpack coords list to size + coords
                 else:
@@ -72,7 +81,7 @@ class MultidimensionalMatrix:
             if not isinstance(array, list):
                 return
 
-            # Check if coords list are big enough.
+            # Check if `coords` list are big enough.
             if len(coords) - 1 < depth:
                 coords.append(0)
 
@@ -157,7 +166,7 @@ class MultidimensionalMatrix:
 
         return MultidimensionalMatrix.empty().shape(
             fillwith=list(map(
-                lambda pack: pack[0] - pack[1],
+                lambda vector: vector[0] - vector[1],
                 zip(
                     self.elements(),
                     other.elements()
@@ -230,19 +239,10 @@ class MultidimensionalMatrix:
                     lambda n: f'{n:03}',
                     itertools.chain(self.dimensions, self.elements()))))
 
-    def wrapWith(self, cls):
+    def convertTo(self, cls):
         """Create new exemplar of given class with data of current one.
         """
         return cls(data=self.data)
-
-    @property
-    def to2d(self):
-        """Returns Matrix with the same data.
-        """
-        if len(self.dimensions) != 2:
-            raise ValueError("This matrix is not 2-dimensional")
-
-        return Matrix(data=self.data)
 
 
 class Matrix(MultidimensionalMatrix):
@@ -254,6 +254,14 @@ class Matrix(MultidimensionalMatrix):
             self.data = data
         else:
             return super().__init__([height, width], data)
+
+    @classmethod
+    def sizedAs(cls, height, width):
+        return cls(height, width, None)
+
+    @classmethod
+    def filledWith(cls, data):
+        return cls(None, None, data)
 
     def rows(self):
         """Generate rows.
@@ -321,7 +329,9 @@ class Matrix(MultidimensionalMatrix):
     def __mul__(self, other):
         # Try scalar multiplication.
         try:
-            return (MultidimensionalMatrix(data=self.data) * other).to2d
+            return (
+                MultidimensionalMatrix.filledWith(self.data) * other
+            ).convertTo(Matrix)
 
         # If not:
         except ValueError:
@@ -347,7 +357,7 @@ class Matrix(MultidimensionalMatrix):
 
     def __pow__(self, n):
         if n == -1:
-            return self.inverse()
+            return self.inversed
         elif n < -1:
             raise ValueError("Operation is not determined.")
 
@@ -374,6 +384,14 @@ class SquareMatrix(Matrix):
             return
         else:
             return super().__init__(size, size, data)
+
+    @classmethod
+    def filledWith(cls, data):
+        return cls(None, data)
+
+    @classmethod
+    def sizedAs(cls, size):
+        return cls(size, None)
 
     @property
     def diagonal(self):
@@ -410,7 +428,7 @@ class SquareMatrix(Matrix):
             new.data.append(
                 AugmentedMatrix(
                     coeffs=self,
-                    eqs=Matrix(data=vector).transposed)
+                    eqs=Matrix.filledWith(vector).transposed)
                 .eliminated()
                 .roots)
 
@@ -439,12 +457,9 @@ class NotSolvable(Exception):
 
 class AugmentedMatrix():
 
-    def __init__(self, coeffs, eqs=None):
+    def __init__(self, coeffs, eqs):
         """Check A and B matrices and create augmented matrix.
         """
-        if not eqs:
-            eqs = Matrix(data=[[1]] * coeffs.dimensions[0])
-
         if not(isinstance(coeffs, Matrix) and isinstance(eqs, Matrix)):
             raise ValueError("Both parameters must be Matrix.")
 
@@ -453,6 +468,13 @@ class AugmentedMatrix():
 
         self.coeffs = coeffs
         self.eqs = eqs
+
+    @classmethod
+    def withZeroEqs(cls, coeffs):
+        return cls(
+            coeffs,
+            eqs=Matrix(
+                data=[[1]] * coeffs.dimensions[0]))
 
     def __repr__(self):
         return (
@@ -587,7 +609,7 @@ class TriangularMatrix(SquareMatrix):
 
     @classmethod
     def byGauss(cls, matrix):
-        return AugmentedMatrix(coeffs=matrix).eliminated().coeffs
+        return AugmentedMatrix.withZeroEqs(matrix).eliminated().coeffs
 
     @property
     def det(self):
