@@ -10,7 +10,7 @@ class MultidimensionalMatrix:
         """Create matrix with given dimensions and fill it with None OR create
         matrix and assign it with data.
         """
-        if not dimensions and type(data) is list:
+        if not dimensions and isinstance(data, list):
             self.data = deepcopy(data)
 
         elif not data:
@@ -69,7 +69,7 @@ class MultidimensionalMatrix:
 
         def measure(array, depth=0):
 
-            if type(array) is not list:
+            if not isinstance(array, list):
                 return
 
             # Check if coords list are big enough.
@@ -111,7 +111,7 @@ class MultidimensionalMatrix:
         """
         def flat(array):
             for el in array:
-                if type(el) is list:
+                if isinstance(el, list):
                     for subel in flat(el):
                         yield subel
                 else:
@@ -212,7 +212,7 @@ class MultidimensionalMatrix:
     def __len__(self):
         """Returns size of dimensions.
         """
-        return len(self.dimensions)
+        return self.dimensions[0]
 
     def __deepcopy__(self, memdict):
         return type(self)(data=deepcopy(self.data))
@@ -250,7 +250,7 @@ class Matrix(MultidimensionalMatrix):
     def __init__(self, height=None, width=None, data=None):
         """Create [height x width] matrix.
         """
-        if type(data) is list:
+        if isinstance(data, list):
             self.data = data
         else:
             return super().__init__([height, width], data)
@@ -293,7 +293,17 @@ class Matrix(MultidimensionalMatrix):
 
     @property
     def transposed(self):
-        return type(self)(data=[list(row) for row in zip(*self.data)])
+        if len(self.dimensions) == 1:
+            return type(self)(
+                data=[[el] for el in self.data]
+            )
+
+        else:
+            return type(self)(
+                data=[
+                    list(row)
+                    for row in
+                    zip(*self.data)])
 
     def insertInto(value, coordinates, fillwith):
         if len(coordinates) > 2:
@@ -355,10 +365,11 @@ class SquareMatrix(Matrix):
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
         """
-        if bool(size) == bool(data):
+        # XOR operation
+        if bool(size) == (data is not None):
             raise ValueError("Need size or data.")
 
-        if type(data) is list and not size:
+        if isinstance(data, list) and not size:
             self.data = data
             return
         else:
@@ -391,6 +402,20 @@ class SquareMatrix(Matrix):
             result += el
         return result
 
+    @property
+    def inversed(self, *args):
+        new = SquareMatrix.empty()
+
+        for vector in self.identityMask.rows():
+            new.data.append(
+                AugmentedMatrix(
+                    coeffs=self,
+                    eqs=Matrix(data=vector).transposed)
+                .eliminated()
+                .roots)
+
+        return new
+
     @classmethod
     def ofIdentity(cls, size):
         return cls(data=[
@@ -402,6 +427,10 @@ class SquareMatrix(Matrix):
             for nrow
             in range(size)
         ])
+
+    @property
+    def identityMask(self):
+        return SquareMatrix.ofIdentity(size=len(self))
 
 
 class NotSolvable(Exception):
@@ -416,7 +445,7 @@ class AugmentedMatrix():
         if not eqs:
             eqs = Matrix(data=[[1]] * coeffs.dimensions[0])
 
-        if not(type(coeffs) is type(eqs) is Matrix):
+        if not(isinstance(coeffs, Matrix) and isinstance(eqs, Matrix)):
             raise ValueError("Both parameters must be Matrix.")
 
         if eqs.dimensions != [coeffs.dimensions[0], 1]:
@@ -435,7 +464,7 @@ class AugmentedMatrix():
         return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
 
     def __setitem__(self, key, item):
-        if type(item) is not AugmentedMatrixRow:
+        if not isinstance(item, AugmentedMatrixRow):
             raise ValueError("Assigning item type must be AugmentedMatrixRow.")
 
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
@@ -455,8 +484,7 @@ class AugmentedMatrix():
             coeffs=deepcopy(self.coeffs),
             eqs=deepcopy(self.eqs))
 
-    @property
-    def gaussEliminated(self):
+    def eliminated(self, rowSorting=True):
         """Gaussian elimination.
         """
 
@@ -469,11 +497,12 @@ class AugmentedMatrix():
             # Diagonal element.
             x = abs(new[i][i])
             maxRow = i
-            # Row sorting.
-            for k in range(i + 1, n):
-                if abs(new[k][i]) > x:
-                    x = abs(new[k][i])
-                    maxRow = k
+
+            if rowSorting:
+                for k in range(i + 1, n):
+                    if abs(new[k][i]) > x:
+                        x = abs(new[k][i])
+                        maxRow = k
 
             if i != maxRow:
                 new[i], new[maxRow] = new[maxRow], new[i]
@@ -488,16 +517,13 @@ class AugmentedMatrix():
                 for j in range(i, n + 1):
                     new[k][j] += c * new[i][j]
 
-        new.coeffs = TopTriangularMatrix(data=new.coeffs.data)
-        new.coeffs.sign = sign
+        new.coeffs = TriangularMatrix(data=new.coeffs.data, sign=sign)
 
         return new
 
-    def gaussEliminate(self):
-        """Do Gaussian elimination on this matrix.
-        """
+    def eliminate(self, *args, **kwargs):
 
-        self = self.gaussEliminated
+        self = self.eliminated(*args, **kwargs)
 
     @property
     def roots(self):
@@ -550,21 +576,18 @@ class AugmentedMatrixRow:
         return f"<AugmentedMatrixRow data={str(self)}>"
 
 
-class TopTriangularMatrix(SquareMatrix):
+class TriangularMatrix(SquareMatrix):
 
     def __init__(self, data, sign=1):
         self.sign = sign
         self.data = data
 
     def __repr__(self):
-        return f"<TopTriangularMatrix dimensions={self.data.dimensions}>"
+        return f"<TriangularMatrix dimensions={self.data.dimensions}>"
 
     @classmethod
     def byGauss(cls, matrix):
-        eliminated = AugmentedMatrix(coeffs=matrix).gaussEliminated
-        return cls(
-            data=eliminated.coeffs,
-            sign=eliminated.sign)
+        return AugmentedMatrix(coeffs=matrix).eliminated().coeffs
 
     @property
     def det(self):
