@@ -13,11 +13,11 @@ class MultidimensionalMatrix:
         if not dimensions and isinstance(data, list):
             self.data = deepcopy(data)
 
-        elif not data:
-            self.shape(None, dimensions)
+        elif not dimensions and not data:
+            raise ValueError("Check docstring for help.")
 
         else:
-            raise ValueError("Check docstring for help.")
+            self.shape(data, dimensions)
 
     @classmethod
     def sizedAs(cls, dimensions):
@@ -68,7 +68,7 @@ class MultidimensionalMatrix:
     def empty(cls):
         """Creates empty matrix.
         """
-        return cls(data=[])
+        return cls.filledWith([])
 
     @property
     def dimensions(self):
@@ -224,7 +224,7 @@ class MultidimensionalMatrix:
         return self.dimensions[0]
 
     def __deepcopy__(self, memdict):
-        return type(self)(data=deepcopy(self.data))
+        return type(self).filledWith(deepcopy(self.data))
 
     def __getitem__(self, key):
         return self.data[key]
@@ -242,7 +242,7 @@ class MultidimensionalMatrix:
     def convertTo(self, cls):
         """Create new exemplar of given class with data of current one.
         """
-        return cls(data=self.data)
+        return cls.filledWith(self.data)
 
 
 class Matrix(MultidimensionalMatrix):
@@ -288,20 +288,6 @@ class Matrix(MultidimensionalMatrix):
         """Returns n-th column.
         """
         return [row[n] for row in self.data]
-
-    @property
-    def isSquare(self):
-        dimensions = self.dimensions
-        # Check if list has two elements and they are same.
-        return dimensions.count(dimensions[0]) == len(dimensions) == 2
-
-    def toSquare(self):
-        """Return SquareMatrix with the data of a current one.
-        """
-        if not self.isSquare:
-            raise TypeError("This matrix is not square.")
-
-        return SquareMatrix(data=self.data)
 
     @property
     def transposed(self):
@@ -379,10 +365,6 @@ class SquareMatrix(Matrix):
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
         """
-        # XOR operation
-        if bool(size) == (data is not None):
-            raise ValueError("Need size or data.")
-
         if isinstance(data, list) and not size:
             self.data = data
             return
@@ -396,6 +378,10 @@ class SquareMatrix(Matrix):
     @classmethod
     def sizedAs(cls, size):
         return cls(size, None)
+
+    @classmethod
+    def zeros(cls, size):
+        return cls(size, data=0)
 
     @property
     def diagonal(self):
@@ -433,7 +419,7 @@ class SquareMatrix(Matrix):
                 AugmentedMatrix(
                     coeffs=self,
                     eqs=Matrix.filledWith(vector).transposed)
-                .eliminated()
+                .gaussianEliminated()
                 .roots)
 
         return new
@@ -444,7 +430,7 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def ofIdentity(cls, size):
-        return cls(data=[
+        return cls.filledWith([
             [
                 1 if ncell == nrow else 0
                 for ncell
