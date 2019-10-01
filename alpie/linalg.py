@@ -360,6 +360,10 @@ class Matrix(MultidimensionalMatrix):
         return new
 
 
+class NotSymmetric(Exception):
+    pass
+
+
 class SquareMatrix(Matrix):
 
     def __init__(self, size=None, data=None):
@@ -442,6 +446,9 @@ class SquareMatrix(Matrix):
 
     @property
     def choleskyDecomposed(self):
+        if not self.isSymmetric:
+            raise NotSymmetric("This method require symmetrical matrix.")
+
         n = self.dimensions[0]
 
         T = SquareMatrix(size=n, data=0)
@@ -477,6 +484,14 @@ class SquareMatrix(Matrix):
     @property
     def identityMask(self):
         return SquareMatrix.ofIdentity(size=len(self))
+
+    @property
+    def isSymmetric(self):
+        # It could be shorter with self == self.transposed, but that means
+        # instantiating another matrix class and comparing them, so the
+        # following approach is faster.
+        square = list(map(tuple, self.data))
+        return square == list(zip(*square))
 
 
 class NotSolvable(Exception):
