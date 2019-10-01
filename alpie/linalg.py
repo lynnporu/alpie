@@ -263,6 +263,10 @@ class Matrix(MultidimensionalMatrix):
     def filledWith(cls, data):
         return cls(None, None, data)
 
+    @classmethod
+    def zeros(cls, height, width):
+        return cls(height, width, data=0)
+
     def rows(self):
         """Generate rows.
         """
@@ -434,6 +438,10 @@ class SquareMatrix(Matrix):
 
         return new
 
+    @property
+    def cond(self):
+        return self.euclideanNorm * self.inversed.euclideanNorm
+
     @classmethod
     def ofIdentity(cls, size):
         return cls(data=[
@@ -445,6 +453,40 @@ class SquareMatrix(Matrix):
             for nrow
             in range(size)
         ])
+
+    @property
+    def choleskyDecomposed(self):
+        n = self.dimensions[0]
+
+        T = SquareMatrix(size=n, data=0)
+
+        T[0][0] = self[0][0] ** .5
+
+        for i, j in itertools.product(range(0, n), repeat=2):
+
+            if i == 0:
+
+                T[i][j] = self[i][j] / T[i][i]
+
+            elif i == j:
+
+                S = 0
+                for k in range(0, i):
+                    S += T[k][i] ** 2
+                T[i][j] = (self[i][j] - S) ** .5
+
+            elif i < j:
+
+                S = 0
+                for k in range(0, i):
+                    S += T[k][i] ** 2
+                T[i][j] = (self[i][j] - S) / T[i][i]
+
+            elif i > j:
+
+                T[i][j] = 0
+
+        return (T.transposed, T)
 
     @property
     def identityMask(self):
@@ -506,7 +548,7 @@ class AugmentedMatrix():
             coeffs=deepcopy(self.coeffs),
             eqs=deepcopy(self.eqs))
 
-    def eliminated(self, rowSorting=True):
+    def gaussianEliminated(self, rowSorting=True):
         """Gaussian elimination.
         """
 
@@ -543,13 +585,13 @@ class AugmentedMatrix():
 
         return new
 
-    def eliminate(self, *args, **kwargs):
+    def gaussianEliminate(self, *args, **kwargs):
 
-        self = self.eliminated(*args, **kwargs)
+        self = self.gaussianEliminated(*args, **kwargs)
 
     @property
     def roots(self):
-        """Calculate roots out of eliminated matrix.
+        """Calculate roots out of upper triangular matrix.
         """
 
         n = len(self)
@@ -566,6 +608,20 @@ class AugmentedMatrix():
                 self[k][n] -= self[k][i] * x[0]
 
         return x
+
+    @property
+    def inverted(self):
+        """Returns matrix, where lower equations are swapped with upper.
+        """
+        # TODO: make method for inverting matrix at chosen dimension
+        return type(self)(
+            coeffs=Matrix.filledWith(self.coeffs[::-1]),
+            eqs=Matrix.filledWith(self.eqs[::-1]))
+
+    @property
+    def lowroots(self):
+        """Calculate roots of lower triangular matrix.
+        """
 
 
 class AugmentedMatrixRow:
@@ -605,11 +661,11 @@ class TriangularMatrix(SquareMatrix):
         self.data = data
 
     def __repr__(self):
-        return f"<TriangularMatrix dimensions={self.data.dimensions}>"
+        return f"<TriangularMatrix dimensions={self.dimensions}>"
 
     @classmethod
     def byGauss(cls, matrix):
-        return AugmentedMatrix.withZeroEqs(matrix).eliminated().coeffs
+        return AugmentedMatrix.withZeroEqs(matrix).gaussianEliminated().coeffs
 
     @property
     def det(self):
