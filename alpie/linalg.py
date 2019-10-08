@@ -88,6 +88,7 @@ class MultidimensionalMatrix:
             # Add size of the biggest element at this dimension.
             coords[depth] = max(coords[depth], len(array))
 
+            # TODO: check if array is list
             # Go recursively.
             for item in array:
                 measure(item, depth + 1)
@@ -95,6 +96,39 @@ class MultidimensionalMatrix:
         measure(self.data)
 
         return coords
+
+    def inversedAt(self, dimension=1):
+        """Inverse matrix at given dimension depth.
+        Example: inverseAt(dimension=0) will inverse rows of square matrix,
+                inverseAt(dimension=1) will inverse columns of square matrix.
+
+        If dimensions is list, then matrix will be inversed on each of
+        dimensions consequently.
+        """
+
+        def dig(array, lookfor, currdepth=0):
+
+            if currdepth == lookfor:
+                return array[::-1]
+
+            else:
+                array = [
+                    dig(subarr, lookfor, currdepth + 1)
+                    for subarr in array
+                ]
+
+            return array
+
+        new = deepcopy(self.data)
+
+        if type(dimension) is list:
+            for dim in dimension:
+                new = dig(new, dim)
+
+        else:
+            new = dig(new, dimension)
+
+        return type(self).filledWith(new)
 
     def insertInto(self, coordinates: list, value, fillwith=None):
         """Insert given value exactly into given coordinates. Enlarge matrix by
