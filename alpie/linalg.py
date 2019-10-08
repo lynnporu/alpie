@@ -732,6 +732,41 @@ class TriangularMatrix(SquareMatrix):
     def __repr__(self):
         return f"<TriangularMatrix dimensions={self.dimensions}>"
 
+    @property
+    def lookCorners(self):
+        """Return list of 4 elements, where each one represents whether the
+        value of a specific corner is presented. The result has such format:
+        [upper-left, upper-right, lower-left, lower-right].
+        For example, if we have such matrix:
+        1 1 ... 1
+        0 1 ... 1
+        ...
+        0 0 ... 0
+        then function will return [True, True, False, True]
+        """
+        print(self)
+        return [
+            self[0][0] != 0,
+            self[0][-1] != 0,
+            self[-1][0] != 0,
+            self[-1][-1] != 0
+        ]
+
+    @property
+    def isUpperLeft(self):
+        return self.lookCorners == [True, True, True, False]
+
+    @property
+    def isUpperRight(self):
+        return self.lookCorners == [True, True, False, True]
+
+    @property
+    def isLowerLeft(self):
+        return self.lookCorners == [True, False, True, True]
+
+    @property
+    def isLowerRight(self):
+        return self.lookCorners == [False, True, True, True]
     @classmethod
     def byGauss(cls, matrix):
         return AugmentedMatrix.withZeroEqs(matrix).gaussianEliminated().coeffs
