@@ -123,10 +123,32 @@ class MultidimensionalMatrix:
 
         new = deepcopy(self.data)
 
-        for dim in dimensions:
-            new = dig(new, dim)
+        try:
+
+            for dim in dimensions:
+                new = dig(new, dim)
+
+        # Object is not iterable.
+        except TypeError:
+            raise IndexError("This matrix have not such dimension level.")
 
         return type(self).filledWith(new)
+
+    def inverseAt(self, *dimensions):
+        """Alias for `inversedAt` method.
+        """
+        self = self.inversedAt(*dimensions)
+
+    @property
+    def rotated(self):
+        """Inverse this matrix at each dimension level.
+        """
+        return self.inversedAt(*self.dimensions)
+
+    def rotate(self):
+        """Make this matrix rotated.
+        """
+        self = self.rotated
 
     def insertInto(self, coordinates: list, value, fillwith=None):
         """Insert given value exactly into given coordinates. Enlarge matrix by
@@ -524,6 +546,20 @@ class SquareMatrix(Matrix):
         # following approach is faster.
         square = list(map(tuple, self.data))
         return square == list(zip(*square))
+
+    @property
+    def withInversedRows(self):
+        return self.inversedAt(0)
+
+    def inverseRows(self):
+        self = self.inversedAt(0)
+
+    @property
+    def withInversedColummns(self):
+        return self.inverseAt(1)
+
+    def inverseColumns(self):
+        self = self.inversedAt(1)
 
 
 class NotSolvable(Exception):
