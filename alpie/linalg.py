@@ -2,6 +2,7 @@ from copy import deepcopy
 from math import floor, ceil
 import numbers
 import itertools
+import operator
 
 
 class MultidimensionalMatrix:
@@ -37,6 +38,9 @@ class MultidimensionalMatrix:
         with given dimensions in recursive order. Missing elements will be
         filled as `background`, otherwise ValueError will raise.
         """
+        if not dimensions:
+            dimensions = self.dimensions
+
         self.data = list()
 
         def fill(array, size, *coords):
@@ -63,6 +67,12 @@ class MultidimensionalMatrix:
         fill(self.data, *dimensions)
 
         return self
+
+    @property
+    def sketch(self):
+        """Returns empty matrix with same dimensions.
+        """
+        return type(self).sizedAs(self.dimensions)
 
     @classmethod
     def empty(cls):
@@ -192,7 +202,6 @@ class MultidimensionalMatrix:
         return matrix.shape(
             fillwith=list(map(
                 function, matrix.elements())),
-            dimensions=matrix.dimensions,
             unpack=True)
 
     def __mul__(self, other):
@@ -206,27 +215,20 @@ class MultidimensionalMatrix:
         if self.dimensions != other.dimensions:
             raise ValueError("Matrices have not the same dimensions.")
 
-        return MultidimensionalMatrix.empty().shape(
+        return self.sketch.shape(
             fillwith=list(map(
-                sum, zip(
-                    self.elements(),
-                    other.elements()))),
-            dimensions=self.dimensions,
+                operator.add,
+                self.elements(), other.elements())),
             unpack=True)
 
     def __sub__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError("Matrices have not the same dimensions.")
 
-        return MultidimensionalMatrix.empty().shape(
-            fillwith=list(map(
-                lambda vector: vector[0] - vector[1],
-                zip(
-                    self.elements(),
-                    other.elements()
-                )
-            )),
-            dimensions=self.dimensions,
+        return self.sketch.shape(
+            fill=list(map(
+                operator.sub,
+                self.elements(), other.elements())),
             unpack=True)
 
     def __eq__(self, other):
