@@ -137,7 +137,7 @@ class MultidimensionalMatrix:
     def inverseAt(self, *dimensions):
         """Alias for `inversedAt` method.
         """
-        self = self.inversedAt(*dimensions)
+        self.data = self.inversedAt(*dimensions).data
 
     @property
     def rotated(self):
@@ -311,11 +311,11 @@ class Matrix(MultidimensionalMatrix):
 
     @classmethod
     def sizedAs(cls, height, width):
-        return cls(height, width, None)
+        return cls(height=height, width=width, data=None)
 
     @classmethod
     def filledWith(cls, data):
-        return cls(None, None, data)
+        return cls(height=None, width=None, data=data)
 
     @classmethod
     def zeros(cls, height, width):
@@ -431,15 +431,15 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def filledWith(cls, data):
-        return cls(None, data)
+        return cls(size=None, data=data)
 
     @classmethod
     def sizedAs(cls, size):
-        return cls(size, None)
+        return cls(size=size, data=None)
 
     @classmethod
     def zeros(cls, size):
-        return cls(size, data=0)
+        return cls(size=size, data=0)
 
     @property
     def diagonal(self):
@@ -552,14 +552,14 @@ class SquareMatrix(Matrix):
         return self.inversedAt(0)
 
     def inverseRows(self):
-        self = self.inversedAt(0)
+        self.inverseAt(0)
 
     @property
     def withInversedColummns(self):
         return self.inverseAt(1)
 
     def inverseColumns(self):
-        self = self.inversedAt(1)
+        self.inverseAt(1)
 
 
 class NotSolvable(Exception):
@@ -568,17 +568,37 @@ class NotSolvable(Exception):
 
 class AugmentedMatrix():
 
-    def __init__(self, coeffs, eqs):
+    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
         """Check A and B matrices and create augmented matrix.
+
+        `forwardRootsOrder` == False means that calculated x1..xn should be
+        inverted into xn..x1 in order to represent real X vector.
+        This can happen when columns of coefficients matrix was swapped.
         """
-        if not(isinstance(coeffs, Matrix) and isinstance(eqs, Matrix)):
-            raise ValueError("Both parameters must be Matrix.")
+        if not(
+            isinstance(coeffs, TriangularMatrix) and isinstance(eqs, Matrix)
+        ):
+            raise ValueError(
+                "Coefficients must be TriangularMatrix, B vector is Matrix.")
 
         if eqs.dimensions != [coeffs.dimensions[0], 1]:
             raise ValueError("Incorrect system.")
 
         self.coeffs = coeffs
         self.eqs = eqs
+        self.forwardRootsOrder = forwardRootsOrder
+
+    def inverseColumns(self):
+        """Inverse columns of coefficients matrix.
+        """
+        self.coeffs.inverseColumns()
+        self.forwardRootsOrder = not self.forwardRootsOrder
+
+    def inverseRows(self):
+        """Inverse columns of coefficients and `eqs` matrix.
+        """
+        self.coeffs.inverseRows()
+        self.eqs.inverseAt(0)
 
     @classmethod
     def withZeroEqs(cls, coeffs):
@@ -614,8 +634,7 @@ class AugmentedMatrix():
 
     def __deepcopy__(self, memdict):
         return type(self)(
-            coeffs=deepcopy(self.coeffs),
-            eqs=deepcopy(self.eqs))
+            **deepcopy(self.__dict__))
 
     def gaussianEliminated(self, rowSorting=True):
         """Gaussian elimination.
@@ -659,38 +678,47 @@ class AugmentedMatrix():
         self = self.gaussianEliminated(*args, **kwargs)
 
     @property
+    def upperRight(self):
+        """Return copy of this matrix with upper-right coefficients. This can
+        be used in order to calculate roots.
+        """
+        new = deepcopy(self)
+
+        if new.coeffs.isUpperRight:
+            return new
+
+        if new.coeffs.isUpperLeft:
+            new.inverseColumns()
+        elif new.coeffs.isLowerLeft:
+            new.inverseColumns()
+            new.inverseRows()
+        elif new.coeffs.isLowerRight:
+            new.inverseRows()
+
+        return new
+
+    @property
     def roots(self):
-        """Calculate roots out of upper triangular matrix.
+        """Calculate roots out of upper-right matrix. Look TriangularMatrix
+        docstrings for definition.
         """
 
-        n = len(self)
+        matrix = self.upperRight
+
+        n = len(matrix)
         x = []
 
         for i in range(n - 1, -1, -1):
 
             try:
-                x.insert(0, self[i][n] / self[i][i])
+                x.insert(0, matrix[i][n] / matrix[i][i])
             except ZeroDivisionError:
                 raise NotSolvable
 
             for k in range(i - 1, -1, -1):
-                self[k][n] -= self[k][i] * x[0]
+                matrix[k][n] -= matrix[k][i] * x[0]
 
-        return x
-
-    @property
-    def inverted(self):
-        """Returns matrix, where lower equations are swapped with upper.
-        """
-        # TODO: make method for inverting matrix at chosen dimension
-        return type(self)(
-            coeffs=Matrix.filledWith(self.coeffs[::-1]),
-            eqs=Matrix.filledWith(self.eqs[::-1]))
-
-    @property
-    def lowroots(self):
-        """Calculate roots of lower triangular matrix.
-        """
+        return x if matrix.forwardRootsOrder else x[::-1]
 
 
 class AugmentedMatrixRow:
@@ -725,9 +753,15 @@ class AugmentedMatrixRow:
 
 class TriangularMatrix(SquareMatrix):
 
-    def __init__(self, data, sign=1):
+    def __init__(self, data, size=None, sign=1):
+        if size:
+            raise TypeError("Size doesn't matter.")
+
         self.sign = sign
         self.data = data
+
+        if self.lookCorners == [True] * 4:
+            raise ValueError("Given data is not triangular.")
 
     def __repr__(self):
         return f"<TriangularMatrix dimensions={self.dimensions}>"
@@ -744,7 +778,6 @@ class TriangularMatrix(SquareMatrix):
         0 0 ... 0
         then function will return [True, True, False, True]
         """
-        print(self)
         return [
             self[0][0] != 0,
             self[0][-1] != 0,
@@ -767,6 +800,7 @@ class TriangularMatrix(SquareMatrix):
     @property
     def isLowerRight(self):
         return self.lookCorners == [False, True, True, True]
+
     @classmethod
     def byGauss(cls, matrix):
         return AugmentedMatrix.withZeroEqs(matrix).gaussianEliminated().coeffs
@@ -774,6 +808,9 @@ class TriangularMatrix(SquareMatrix):
     @property
     def det(self):
         return self.sign * self.diagmul
+
+    def __deepcopy__(self, memdict):
+        return type(self)(**deepcopy(self.__dict__))
 
     def __setitem__(self, *args):
         raise TypeError("Assigning is not allowed.")
