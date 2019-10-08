@@ -97,10 +97,12 @@ class MultidimensionalMatrix:
 
         return coords
 
-    def inversedAt(self, dimension=1):
-        """Inverse matrix at given dimension depth.
-        Example: inverseAt(dimension=0) will inverse rows of square matrix,
-                inverseAt(dimension=1) will inverse columns of square matrix.
+    def inversedAt(self, *dimensions):
+        """Inverse matrix at each given dimension depth.
+        Example:
+            inverseAt(0) will inverse rows of square matrix,
+            inverseAt(1) will inverse columns of square matrix,
+            inverseAt(0, 1) returns transposed matrix.
 
         If dimensions is list, then matrix will be inversed on each of
         dimensions consequently.
@@ -121,12 +123,8 @@ class MultidimensionalMatrix:
 
         new = deepcopy(self.data)
 
-        if type(dimension) is list:
-            for dim in dimension:
-                new = dig(new, dim)
-
-        else:
-            new = dig(new, dimension)
+        for dim in dimensions:
+            new = dig(new, dim)
 
         return type(self).filledWith(new)
 
