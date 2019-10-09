@@ -5,6 +5,10 @@ import itertools
 import operator
 
 
+class InappropriateDimensions(Exception):
+    pass
+
+
 class MultidimensionalMatrix:
 
     def __init__(self, dimensions=None, data=None):
@@ -140,7 +144,7 @@ class MultidimensionalMatrix:
 
         # Object is not iterable.
         except TypeError:
-            raise IndexError("This matrix have not such dimension level.")
+            raise InappropriateDimensions
 
         return type(self).filledWith(new)
 
@@ -206,14 +210,14 @@ class MultidimensionalMatrix:
 
     def __mul__(self, other):
         if not isinstance(other, numbers.Number):
-            raise ValueError("The second variable must be number.")
+            raise InappropriateDimensions
 
         return self.mapWith(
             lambda el: el * other)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
-            raise ValueError("Matrices have not the same dimensions.")
+            raise InappropriateDimensions
 
         return self.sketch.shape(
             fillwith=list(map(
@@ -223,7 +227,7 @@ class MultidimensionalMatrix:
 
     def __sub__(self, other):
         if self.dimensions != other.dimensions:
-            raise ValueError("Matrices have not the same dimensions.")
+            raise InappropriateDimensions
 
         return self.sketch.shape(
             fill=list(map(
@@ -348,14 +352,13 @@ class Matrix(MultidimensionalMatrix):
     @property
     def transposed(self):
         if len(self.dimensions) == 1:
-            return type(self)(
-                data=[[el] for el in self.data]
+            return type(self).filledWith(
+                [[el] for el in self.data]
             )
 
         else:
-            return type(self)(
-                data=[
-                    list(row)
+            return type(self).filledWith(
+                [list(row)
                     for row in
                     zip(*self.data)])
 
