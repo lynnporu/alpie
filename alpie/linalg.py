@@ -32,6 +32,16 @@ class MultidimensionalMatrix:
     def filledWith(cls, data):
         return cls(None, data)
 
+    @classmethod
+    def ensure(cls, data):
+        """Ensure if given object has the same type as current class.
+        """
+        if isinstance(data, cls):
+            return data
+
+        else:
+            return cls.filledWith(data)
+
     def shape(
         self, fillwith=None, dimensions=None, unpack=False,
         background=None
@@ -210,7 +220,7 @@ class MultidimensionalMatrix:
 
     def __mul__(self, other):
         if not isinstance(other, numbers.Number):
-            raise InappropriateDimensions
+            raise ValueError("Must be number.")
 
         return self.mapWith(
             lambda el: el * other)
@@ -580,11 +590,8 @@ class AugmentedMatrix():
         inverted into xn..x1 in order to represent real X vector.
         This can happen when columns of coefficients matrix was swapped.
         """
-        if not(
-            isinstance(coeffs, TriangularMatrix) and isinstance(eqs, Matrix)
-        ):
-            raise ValueError(
-                "Coefficients must be TriangularMatrix, B vector is Matrix.")
+        coeffs = TriangularMatrix.ensure(coeffs)
+        eqs = Matrix.ensure(eqs)
 
         if eqs.dimensions != [coeffs.dimensions[0], 1]:
             raise ValueError("Incorrect system.")
@@ -622,9 +629,7 @@ class AugmentedMatrix():
         return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
 
     def __setitem__(self, key, item):
-        if not isinstance(item, AugmentedMatrixRow):
-            raise ValueError("Assigning item type must be AugmentedMatrixRow.")
-
+        item = AugmentedMatrixRow.ensure(item)
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
 
     def __len__(self):
