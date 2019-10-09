@@ -1,5 +1,6 @@
 from copy import deepcopy
 from math import floor, ceil
+from functools import partial
 import numbers
 import itertools
 import operator
@@ -248,6 +249,9 @@ class MultidimensionalMatrix:
     def __eq__(self, other):
         return self.data == other.data
 
+    def __bool__(self):
+        return len(self) > 0
+
     def __neg__(self):
         return self * -1
 
@@ -289,9 +293,9 @@ class MultidimensionalMatrix:
         return f"<MultidimensionalMatrix dimensions={self.dimensions}>"
 
     def __len__(self):
-        """Returns size of dimensions.
+        """Returns first dimension.
         """
-        return self.dimensions[0]
+        return len(self.data)
 
     def __deepcopy__(self, memdict):
         return type(self).filledWith(deepcopy(self.data))
@@ -817,6 +821,39 @@ class AugmentedMatrix():
             partial(
                 AugmentedMatrix.simpleAccuracy,
                 accuracy))
+
+    def seidelIteration(self, initial=None, accuracy=1e-10):
+        """Apply Seidel iteration to this matrix with some initial and
+        accuracy.
+        """
+        if initial:
+            X = Matrix.ensure(initial)
+            if X.dimensions != self.eqs.dimensions:
+                raise InappropriateDimensions
+
+        coeffsA, coeffsB = self.simpleIterationCoefficients
+
+        if not initial:
+            X = deepcopy(coeffsB)
+
+        def iterator(C, d, x):
+            newX = Matrix.empty()
+            # Calculate each equation apart
+            for row, b in zip(C.rows(), d.elements()):
+                newX.data.append([b + sum(
+                    [cn * xn for cn, xn in zip(row, x.elements())]
+                    # No x was calculated yet
+                    if not newX else
+                    [cn * newX[-1][0] for cn in row]
+                )])
+            return newX
+
+        return self.fixedPointIteration(
+            X,
+            partial(iterator, coeffsA, coeffsB),
+            partial(AugmentedMatrix.simpleAccuracy, accuracy))
+
+
 class AugmentedMatrixRow:
 
     def __init__(self, coeffs, eq):
