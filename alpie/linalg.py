@@ -795,6 +795,28 @@ class AugmentedMatrix():
         return max(map(
             operator.sub, x0.elements(), x1.elements())) <= eps
 
+    def simpleIteration(self, initial=None, accuracy=1e-10):
+        """Apply fixed-point iteration to this matrix with some initial
+        approximation, which is instance of Matrix.
+        """
+        if initial:
+            X = Matrix.ensure(initial)
+            if X.dimensions != self.eqs.dimensions:
+                raise InappropriateDimensions
+
+        coeffsA, coeffsB = self.simpleIterationCoefficients
+
+        if not initial:
+            X = deepcopy(coeffsB)
+
+        return self.fixedPointIteration(
+            X,
+            partial(
+                lambda C, d, x: d + C * x,
+                coeffsA, coeffsB),
+            partial(
+                AugmentedMatrix.simpleAccuracy,
+                accuracy))
 class AugmentedMatrixRow:
 
     def __init__(self, coeffs, eq):
