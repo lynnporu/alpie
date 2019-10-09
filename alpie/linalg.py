@@ -746,46 +746,54 @@ class AugmentedMatrix():
 
         return self.coeffs * x
 
-    def fixedPointIteration(self, initial=None, accuracy=1e-2):
-        """Apply fixed-point iteration to this augmented matrix with some
-        initial approximation, which is instance of Matrix.
+    @property
+    def simpleIterationCoefficients(self):
+        """Return matrices for simple fixed-point iteration.
         """
-        if initial:
-            initial = Matrix.ensure(initial)
-            if initial.dimensions != self.eqs.dimensions:
-                raise InappropriateDimensions
-
-        coeffsA = SquareMatrix.empty()
-        coeffsB = Matrix.empty()
+        A = SquareMatrix.empty()
+        B = Matrix.empty()
 
         # aii - diagonal element, aij - coeffs row, bi - eqs row
         for aii, aij, bi in zip(
             self.coeffs.diagonal, self.coeffs.rows(), self.eqs.rows()
         ):
-            coeffsA.data.append([-el / aii for el in aij])
-            coeffsB.data.append([bi[0] / aii])
+            A.data.append([-el / aii for el in aij])
+            B.data.append([bi[0] / aii])
 
-        coeffsA.zeroDiagonal()
+        A.zeroDiagonal()
 
-        if not initial:
-            X = deepcopy(coeffsB)
-        else:
-            X = initial
+        return (A, B)
 
-        def accuracySatisfied(x0, x1):
-            return max(map(
-                operator.sub, x0.elements(), x1.elements())) <= accuracy
+    def fixedPointIteration(self, initial, iterator, accuracyfunc):
+        """Solve system of linear equations by fixed-point iteration method in
+        form of: x(k+1) = x(k) * C + d
+
+        accuracyfunc will be called with (x0, x1) parameters, where each of
+        them define X vector at correspond step.
+
+        iterator will be called with X-vector at previous step. It should
+        return new X.
+        """
+        X = deepcopy(initial)
 
         while True:
-
-            newX = coeffsB + coeffsA * X
-            if accuracySatisfied(X, newX):
+            newX = iterator(X)
+            if accuracyfunc(X, newX):
                 X = newX
                 break
-            X = newX
+            else:
+                X = newX
 
         return X
 
+    @staticmethod
+    def simpleAccuracy(eps, x0, x1):
+        """Check accuracy of X-vector calculating by this formula:
+        max(x0[i] - x1[i]) < eps,
+        where xn[i] is a i-th element of vector.
+        """
+        return max(map(
+            operator.sub, x0.elements(), x1.elements())) <= eps
 
 class AugmentedMatrixRow:
 
