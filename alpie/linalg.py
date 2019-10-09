@@ -86,7 +86,7 @@ class MultidimensionalMatrix:
     def sketch(self):
         """Returns empty matrix with same dimensions.
         """
-        return type(self).sizedAs(self.dimensions)
+        return type(self).sizedAs(*self.dimensions)
 
     @classmethod
     def empty(cls):
@@ -398,8 +398,8 @@ class Matrix(MultidimensionalMatrix):
             if self.dimensions[1] != other.dimensions[0]:
                 raise ValueError("These matrices can not be multiplied.")
 
-            return Matrix(
-                data=[
+            return type(self).filledWith(
+                [
                     [
                         sum(
                             el1 * el2
@@ -434,6 +434,8 @@ class NotSymmetric(Exception):
 
 
 class SquareMatrix(Matrix):
+
+    # TODO: make __repr__ methods for all classes
 
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
@@ -576,6 +578,12 @@ class SquareMatrix(Matrix):
     def inverseColumns(self):
         self.inverseAt(1)
 
+    def zeroDiagonal(self):
+        """Make diagonal of this matrix equal to zero.
+        """
+        for i in range(len(self)):
+            self[i][i] = 0
+
 
 class NotSolvable(Exception):
     pass
@@ -590,7 +598,9 @@ class AugmentedMatrix():
         inverted into xn..x1 in order to represent real X vector.
         This can happen when columns of coefficients matrix was swapped.
         """
-        coeffs = TriangularMatrix.ensure(coeffs)
+        # TODO: create EliminatedAugmentedMatrix and ensure, that coeffs is
+        # instance of TriangularMatrix
+        coeffs = Matrix.ensure(coeffs)
         eqs = Matrix.ensure(eqs)
 
         if eqs.dimensions != [coeffs.dimensions[0], 1]:
@@ -729,6 +739,52 @@ class AugmentedMatrix():
                 matrix[k][n] -= matrix[k][i] * x[0]
 
         return x if matrix.forwardRootsOrder else x[::-1]
+
+    def calculate(self, x):
+        """Calculate result of equations with given X vector.
+        """
+
+        return self.coeffs * x
+
+    def fixedPointIteration(self, initial=None, accuracy=1e-2):
+        """Apply fixed-point iteration to this augmented matrix with some
+        initial approximation, which is instance of Matrix.
+        """
+        if initial:
+            initial = Matrix.ensure(initial)
+            if initial.dimensions != self.eqs.dimensions:
+                raise InappropriateDimensions
+
+        coeffsA = SquareMatrix.empty()
+        coeffsB = Matrix.empty()
+
+        # aii - diagonal element, aij - coeffs row, bi - eqs row
+        for aii, aij, bi in zip(
+            self.coeffs.diagonal, self.coeffs.rows(), self.eqs.rows()
+        ):
+            coeffsA.data.append([-el / aii for el in aij])
+            coeffsB.data.append([bi[0] / aii])
+
+        coeffsA.zeroDiagonal()
+
+        if not initial:
+            X = deepcopy(coeffsB)
+        else:
+            X = initial
+
+        def accuracySatisfied(x0, x1):
+            return max(map(
+                operator.sub, x0.elements(), x1.elements())) <= accuracy
+
+        while True:
+
+            newX = coeffsB + coeffsA * X
+            if accuracySatisfied(X, newX):
+                X = newX
+                break
+            X = newX
+
+        return X
 
 
 class AugmentedMatrixRow:
