@@ -604,7 +604,7 @@ class NotSolvable(Exception):
     pass
 
 
-class AugmentedMatrix():
+class AugmentedMatrix:
 
     def __init__(self, coeffs, eqs, forwardRootsOrder=True):
         """Check A and B matrices and create augmented matrix.
@@ -613,8 +613,6 @@ class AugmentedMatrix():
         inverted into xn..x1 in order to represent real X vector.
         This can happen when columns of coefficients matrix was swapped.
         """
-        # TODO: create EliminatedAugmentedMatrix and ensure, that coeffs is
-        # instance of TriangularMatrix
         coeffs = Matrix.ensure(coeffs)
         eqs = Matrix.ensure(eqs)
 
@@ -704,56 +702,9 @@ class AugmentedMatrix():
                 for j in range(i, n + 1):
                     new[k][j] += c * new[i][j]
 
-        new.coeffs = TriangularMatrix(data=new.coeffs.data, sign=sign)
-
-        return new
-
-    def gaussianEliminate(self, *args, **kwargs):
-
-        self = self.gaussianEliminated(*args, **kwargs)
-
-    @property
-    def upperRight(self):
-        """Return copy of this matrix with upper-right coefficients. This can
-        be used in order to calculate roots.
-        """
-        new = deepcopy(self)
-
-        if new.coeffs.isUpperRight:
-            return new
-
-        if new.coeffs.isUpperLeft:
-            new.inverseColumns()
-        elif new.coeffs.isLowerLeft:
-            new.inverseColumns()
-            new.inverseRows()
-        elif new.coeffs.isLowerRight:
-            new.inverseRows()
-
-        return new
-
-    @property
-    def roots(self):
-        """Calculate roots out of upper-right matrix. Look TriangularMatrix
-        docstrings for definition.
-        """
-
-        matrix = self.upperRight
-
-        n = len(matrix)
-        x = []
-
-        for i in range(n - 1, -1, -1):
-
-            try:
-                x.insert(0, matrix[i][n] / matrix[i][i])
-            except ZeroDivisionError:
-                raise NotSolvable
-
-            for k in range(i - 1, -1, -1):
-                matrix[k][n] -= matrix[k][i] * x[0]
-
-        return x if matrix.forwardRootsOrder else x[::-1]
+        return EliminatedAugmentedMatrix(
+            TriangularMatrix(data=new.coeffs.data, sign=sign),
+            self.eqs)
 
     def calculate(self, x):
         """Calculate result of equations with given X vector.
@@ -893,6 +844,63 @@ class AugmentedMatrixRow:
 
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
+
+
+# TODO: Test this class.
+class EliminatedAugmentedMatrix(AugmentedMatrix):
+
+    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
+        coeffs = TriangularMatrix.ensure(coeffs)
+
+        return super().__init__(coeffs, eqs, forwardRootsOrder)
+
+    def __repr__(self):
+        return (
+            f"<EliminatedAugmentedMatrix equations={len(self.coeffs)} "
+            f"variables={self.coeffs.dimensions[1]}>")
+
+    @property
+    def upperRight(self):
+        """Return copy of this matrix with upper-right coefficients. This can
+        be used in order to calculate roots.
+        """
+        new = deepcopy(self)
+
+        if new.coeffs.isUpperRight:
+            return new
+
+        if new.coeffs.isUpperLeft:
+            new.inverseColumns()
+        elif new.coeffs.isLowerLeft:
+            new.inverseColumns()
+            new.inverseRows()
+        elif new.coeffs.isLowerRight:
+            new.inverseRows()
+
+        return new
+
+    @property
+    def roots(self):
+        """Calculate roots out of upper-right matrix. Look TriangularMatrix
+        docstrings for definition.
+        """
+
+        matrix = self.upperRight
+
+        n = len(matrix)
+        x = []
+
+        for i in range(n - 1, -1, -1):
+
+            try:
+                x.insert(0, matrix[i][n] / matrix[i][i])
+            except ZeroDivisionError:
+                raise NotSolvable
+
+            for k in range(i - 1, -1, -1):
+                matrix[k][n] -= matrix[k][i] * x[0]
+
+        return x if matrix.forwardRootsOrder else x[::-1]
 
 
 class TriangularMatrix(SquareMatrix):
