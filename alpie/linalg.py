@@ -120,10 +120,10 @@ class MultidimensionalMatrix:
             # Add size of the biggest element at this dimension.
             coords[depth] = max(coords[depth], len(array))
 
-            # TODO: check if array is list
             # Go recursively.
             for item in array:
-                measure(item, depth + 1)
+                if type(array) is not list:
+                    measure(item, depth + 1)
 
         measure(self.data)
 
