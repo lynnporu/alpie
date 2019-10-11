@@ -336,6 +336,9 @@ class Matrix(MultidimensionalMatrix):
         else:
             return super().__init__([height, width], data)
 
+    def __repr__(self):
+        return f"<Matrix dimensions={self.dimensions}>"
+
     @classmethod
     def sizedAs(cls, height, width):
         return cls(height=height, width=width, data=None)
@@ -446,8 +449,6 @@ class NotSymmetric(Exception):
 
 class SquareMatrix(Matrix):
 
-    # TODO: make __repr__ methods for all classes
-
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
         """
@@ -456,6 +457,9 @@ class SquareMatrix(Matrix):
             return
         else:
             return super().__init__(size, size, data)
+
+    def __repr__(self):
+        return f"<SquareMatrix size={len(self)}>"
 
     @classmethod
     def filledWith(cls, data):
