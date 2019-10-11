@@ -87,7 +87,14 @@ class MultidimensionalMatrix:
     def sketch(self):
         """Returns empty matrix with same dimensions.
         """
-        return type(self).sizedAs(*self.dimensions)
+        return self.new.sizedAs(*self.dimensions)
+
+    @property
+    def new(self):
+        """Return current class.
+        """
+
+        return type(self)
 
     @classmethod
     def empty(cls):
@@ -157,7 +164,7 @@ class MultidimensionalMatrix:
         except TypeError:
             raise InappropriateDimensions
 
-        return type(self).filledWith(new)
+        return self.new.filledWith(new)
 
     def inverseAt(self, *dimensions):
         """Alias for `inversedAt` method.
@@ -298,7 +305,7 @@ class MultidimensionalMatrix:
         return len(self.data)
 
     def __deepcopy__(self, memdict):
-        return type(self).filledWith(deepcopy(self.data))
+        return self.new.filledWith(deepcopy(self.data))
 
     def __getitem__(self, key):
         return self.data[key]
@@ -366,12 +373,12 @@ class Matrix(MultidimensionalMatrix):
     @property
     def transposed(self):
         if len(self.dimensions) == 1:
-            return type(self).filledWith(
+            return self.new.filledWith(
                 [[el] for el in self.data]
             )
 
         else:
-            return type(self).filledWith(
+            return self.new.filledWith(
                 [list(row)
                     for row in
                     zip(*self.data)])
@@ -402,7 +409,7 @@ class Matrix(MultidimensionalMatrix):
             if self.dimensions[1] != other.dimensions[0]:
                 raise ValueError("These matrices can not be multiplied.")
 
-            return type(self).filledWith(
+            return self.new.filledWith(
                 [
                     [
                         sum(
@@ -657,7 +664,7 @@ class AugmentedMatrix():
         return out
 
     def __deepcopy__(self, memdict):
-        return type(self)(
+        return self.new(
             **deepcopy(self.__dict__))
 
     def gaussianEliminated(self, rowSorting=True):
@@ -943,7 +950,7 @@ class TriangularMatrix(SquareMatrix):
         return self.sign * self.diagmul
 
     def __deepcopy__(self, memdict):
-        return type(self)(**deepcopy(self.__dict__))
+        return self.new(**deepcopy(self.__dict__))
 
     def __setitem__(self, *args):
         raise TypeError("Assigning is not allowed.")
