@@ -157,7 +157,7 @@ def simpleIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     return matrix.fixedPointIteration(
         X,
         partial(
-            lambda C, d, x: d + C * x,
+            lambda C, d, x: d + C @ x,
             coeffsA, coeffsB),
         partial(
             difference.simpleMax if not accuracyfunc else accuracyfunc,

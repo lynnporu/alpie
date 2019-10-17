@@ -229,11 +229,22 @@ class MultidimensionalMatrix:
             unpack=True)
 
     def __mul__(self, other):
-        if not isinstance(other, numbers.Number):
-            raise ValueError("Must be number.")
+        # Scalar multiplication of two matrices.
+        if (
+            not isinstance(other, numbers.Number) and
+            self.dimensions == other.dimensions
+        ):
+            return sum(map(
+                operator.mul, self.elements(), other.elements()))
 
+        # Multiply by number.
+        else:
+            return self.mapWith(
+                lambda el: el * other)
+
+    def __truediv__(self, other):
         return self.mapWith(
-            lambda el: el * other)
+            lambda el: el / other)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
@@ -401,34 +412,26 @@ class Matrix(MultidimensionalMatrix):
                 lambda n: n ** 2,
                 self.elements())) ** .5
 
-    def __mul__(self, other):
-        # Try scalar multiplication.
-        try:
-            return (
-                MultidimensionalMatrix.filledWith(self.data) * other
-            ).convertTo(Matrix)
+    # TODO: test @ operator in algorithms
+    def __matmul__(self, other):
+        if self.dimensions[1] != other.dimensions[0]:
+            raise ValueError("These matrices can not be multiplied.")
 
-        # If not:
-        except ValueError:
-
-            if self.dimensions[1] != other.dimensions[0]:
-                raise ValueError("These matrices can not be multiplied.")
-
-            return self.new.filledWith(
+        return self.new.filledWith(
+            [
                 [
-                    [
-                        sum(
-                            el1 * el2
-                            for el1, el2
-                            in zip(row1, col2)
-                        )
-                        for col2
-                        in zip(*other.data)
-                    ]
-                    for row1
-                    in self.data
+                    sum(
+                        el1 * el2
+                        for el1, el2
+                        in zip(row1, col2)
+                    )
+                    for col2
+                    in zip(*other.data)
                 ]
-            )
+                for row1
+                in self.data
+            ]
+        )
 
     def __pow__(self, n):
         if n == -1:
