@@ -552,6 +552,7 @@ class SquareMatrix(Matrix):
 
 class AugmentedMatrix:
 
+    # TODO: add `ensure` method.
     def __init__(self, coeffs, eqs, forwardRootsOrder=True):
         """Check A and B matrices and create augmented matrix.
 
@@ -619,7 +620,7 @@ class AugmentedMatrix:
         """Calculate result of equations with given X vector.
         """
 
-        return self.coeffs * x
+        return self.coeffs @ x
 
     def fixedPointIteration(self, initial, iterator, accuracyfunc):
         """Solve system of linear equations by fixed-point iteration method in
