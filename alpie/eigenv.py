@@ -30,7 +30,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
     solvingfunc will be used in order to solve SLAE (Gaussian elimination
     by default).
     """
-    matrix = matrices.Matrix.ensure(matrix)
+    matrix = matrices.SquareMatrix.ensure(matrix)
     initial = matrices.Matrix.ensure(initial)
 
     if not solvingfunc:
@@ -45,8 +45,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
         yk = solvingfunc(
             (
                 matrix - \
-                matrices.SquareMatrix.ofIdentity(len(matrix)) * \
-                rayleighQuotient(matrix, prevX)
+                matrix.identityMask * rayleighQuotient(matrix, prevX)
             ),
             prevX)
         prevX = yk / yk.euclideanNorm

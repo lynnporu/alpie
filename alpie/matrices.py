@@ -90,7 +90,7 @@ class MultidimensionalMatrix:
     def sketch(self):
         """Returns empty matrix with same dimensions.
         """
-        return self.new.sizedAs(*self.dimensions)
+        return self.new.sizedAs(self.dimensions)
 
     @property
     def new(self):
@@ -353,7 +353,10 @@ class Matrix(MultidimensionalMatrix):
         return f"<Matrix dimensions={self.dimensions}>"
 
     @classmethod
-    def sizedAs(cls, height, width):
+    def sizedAs(cls, dimensions: tuple):
+        """`dimensions` is (height, width)
+        """
+        height, width = dimensions
         return cls(height=height, width=width, data=None)
 
     @classmethod
@@ -453,6 +456,8 @@ class SquareMatrix(Matrix):
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
         """
+        if isinstance(size, list):
+            size = size[0]
         if isinstance(data, list) and not size:
             self.data = data
             return
