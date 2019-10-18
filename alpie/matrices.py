@@ -41,7 +41,7 @@ class MultidimensionalMatrix:
         """Ensure if given object has the same type as current class.
         """
         if isinstance(data, cls):
-            return data
+            return deepcopy(data)
 
         else:
             return cls.filledWith(data)
@@ -261,7 +261,7 @@ class MultidimensionalMatrix:
             raise InappropriateDimensions
 
         return self.sketch.shape(
-            fill=list(map(
+            fillwith=list(map(
                 operator.sub,
                 self.elements(), other.elements())),
             unpack=True)
@@ -599,7 +599,8 @@ class AugmentedMatrix:
         return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
 
     def __setitem__(self, key, item):
-        item = AugmentedMatrixRow.ensure(item)
+        if not isinstance(item, AugmentedMatrixRow):
+            raise ValueError("Must be AugmentedMatrixRow.")
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
 
     def __len__(self):
@@ -613,7 +614,7 @@ class AugmentedMatrix:
         return out
 
     def __deepcopy__(self, memdict):
-        return self.new(
+        return type(self)(
             **deepcopy(self.__dict__))
 
     def calculate(self, x):
@@ -733,7 +734,8 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
             for k in range(i - 1, -1, -1):
                 matrix[k][n] -= matrix[k][i] * x[0]
 
-        return x if matrix.forwardRootsOrder else x[::-1]
+        return Matrix.filledWith(
+            x if matrix.forwardRootsOrder else x[::-1]).transposed
 
 
 class TriangularMatrix(SquareMatrix):

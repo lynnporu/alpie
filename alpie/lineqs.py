@@ -111,7 +111,7 @@ def gaussInversed(matrix):
                 matrices.AugmentedMatrix(
                     coeffs=matrix,
                     eqs=matrices.Matrix.filledWith(vector).transposed))
-            .roots)
+            .roots.transposed)
 
     return new
 
