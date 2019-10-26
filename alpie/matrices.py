@@ -2,8 +2,8 @@
 """
 
 
-from math import floor, ceil
 from copy import deepcopy
+import math
 import numbers
 import itertools
 import operator
@@ -85,6 +85,22 @@ class MultidimensionalMatrix:
         fill(self.data, *dimensions)
 
         return self
+
+    @property
+    def coordinates(self):
+        """Return iterator of all coordinates in matrix.
+        """
+        return itertools.product(
+            *map(range, self.dimensions))
+
+    @property
+    def enum(self):
+        """Return iterator of all elements with its coordinates in matrix.
+        """
+        return [
+            (self.at(*position), position)
+            for position
+            in self.coordinates]
 
     @property
     def sketch(self):
@@ -203,6 +219,19 @@ class MultidimensionalMatrix:
 
         insert(self.data, *coordinates)
 
+    def at(self, *coordinates):
+        """Return element at given coordinates. Useful for indexing with tuples:
+        A[0][1][2] -> A.at((0, 1, 2))
+        """
+
+        def dig(array, index, *tail):
+            if not tail:
+                return array[index]
+            else:
+                return dig(array[index], *tail)
+
+        return dig(self.data, *coordinates)
+    
     def elements(self):
         """Generates elements of matrix in the recursive order.
         """
@@ -284,10 +313,10 @@ class MultidimensionalMatrix:
             lambda el: round(el, n))
 
     def __floor__(self):
-        return self.mapWith(floor)
+        return self.mapWith(math.floor)
 
     def __ceil__(self):
-        return self.mapWith(ceil)
+        return self.mapWith(math.ceil)
 
     def __int__(self):
         return self.mapWith(int)
@@ -479,6 +508,21 @@ class SquareMatrix(Matrix):
     def sizedAs(cls, *size):
         size = size[0]
         return cls(size=size, data=None)
+
+    @classmethod
+    def givens(cls, size, i, j, theta):
+        """Returns Givens matrix of given size.
+        """
+        matrix = cls.ofIdentity(size=size)
+        matrix[i][i] = matrix[j][j] = math.cos(theta)
+        matrix[i][j] = -math.sin(theta)
+        matrix[j][i] = math.sin(theta)
+        return matrix
+
+    def givensMask(self, i, j, theta):
+        """Returns Givens matrix with size of current matrix.
+        """
+        return self.new.givens(len(self), i, j, theta)
 
     @classmethod
     def zeros(cls, size):
