@@ -235,6 +235,18 @@ class MultidimensionalMatrix:
         return self.mapWith(
             lambda el: el * other)
 
+    def __truediv__(self, num):
+        return self.mapWith(
+            lambda el: el / num)
+
+    def scalarMul(self, other):
+        """Scalar multiplitation. Must be replaced in
+        next conflict resolving.
+        """
+        return sum(map(
+            operator.mul,
+            self.elements(), other.elements()))
+
     def __add__(self, other):
         if self.dimensions != other.dimensions:
             raise InappropriateDimensions
@@ -250,7 +262,7 @@ class MultidimensionalMatrix:
             raise InappropriateDimensions
 
         return self.sketch.shape(
-            fill=list(map(
+            fillwith=list(map(
                 operator.sub,
                 self.elements(), other.elements())),
             unpack=True)
@@ -464,7 +476,8 @@ class SquareMatrix(Matrix):
         return cls(size=None, data=data)
 
     @classmethod
-    def sizedAs(cls, size):
+    def sizedAs(cls, *size):
+        size = size[0]
         return cls(size=size, data=None)
 
     @classmethod
@@ -566,6 +579,10 @@ class AugmentedMatrix:
         self.eqs = eqs
         self.forwardRootsOrder = forwardRootsOrder
 
+    @property
+    def new(self):
+        return type(self)
+
     def inverseColumns(self):
         """Inverse columns of coefficients matrix.
         """
@@ -595,7 +612,8 @@ class AugmentedMatrix:
         return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
 
     def __setitem__(self, key, item):
-        item = AugmentedMatrixRow.ensure(item)
+        if not isinstance(item, AugmentedMatrixRow):
+            raise ValueError("AugmentedMatrixRow needed.")
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
 
     def __len__(self):
@@ -669,7 +687,6 @@ class AugmentedMatrixRow:
 
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
-
 
 class NotSolvable(Exception):
     pass

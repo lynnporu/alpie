@@ -1,4 +1,4 @@
-"""This module includes methods for solving systems of linear equations,
+"""This module includes methods for solving systems of linear equations.
 """
 
 
