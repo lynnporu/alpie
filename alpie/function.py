@@ -10,7 +10,7 @@ from copy import deepcopy
 
 
 class Executable():
-    """Wrapper for built-in functions.
+    """Executable code.
     """
 
     def __init__(self, fn):
@@ -30,7 +30,7 @@ class Executable():
 
     def __call__(self, **kwargs):
 
-        if not all([name in kwargs for name in self.parameters]):
+        if not all([names in kwargs for names in self.parameters]):
             raise TypeError(
                 "One of these parameters is not present: "
                 f"{', '.join(self.parameters)}")
@@ -45,7 +45,9 @@ class Executable():
                 if name in self.parameters})
 
 
-class Function():
+class RnFunction():
+    """Multidimensional function.
+    """
 
     def __init__(self, fn):
         """Creates function from given callable object.
@@ -71,7 +73,7 @@ class Function():
         return result
 
     def __deepcopy__(self, memdict):
-        new = Function(fn=self.core.executable)
+        new = RnFunction(fn=self.core.executable)
         new.wrappers = deepcopy(self.wrappers)
         return new
 
@@ -206,3 +208,22 @@ class Function():
 
     def __ceil__(self):
         return self.wrapWithOperator(None, math.ceil)
+
+    def derivative(self, variables):
+        """Make partial derivative function with changes on given vars. `vars`
+        is a list of names.
+        """
+
+        def diff(orig, variables, change=1e-12, **params):
+            newparams = {
+                name: value + (
+                    change
+                    if name in variables
+                    else 0)
+                for (name, value)
+                in params.items()
+            }
+            return (orig(**newparams) - orig(**params)) / change
+
+        return functools.partial(
+            diff, self, variables)
