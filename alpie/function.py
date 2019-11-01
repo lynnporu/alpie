@@ -88,249 +88,121 @@ class Function():
     def __len__(self):
         return len(self.parameters)
 
-    @staticmethod
-    def __util_operator__(other, expr, prev, **kwargs):
-        """Do `expr` action on `prev` and `other`, passing `kwargs` to `other`
-        if it's callable.
-        """
-
-        return (expr(
-            prev,
-            other(**kwargs) if callable(other) else other))
-
-    @staticmethod
-    def __util_r_operator__(other, expr, prev, **kwargs):
-        """Right operator alias for __util_r_operator__
-        """
-
-        return (expr(
-            other(**kwargs) if callable(other) else other,
-            prev))
-
-    def wrap(self, fn):
+    def wrapWith(self, fn):
         self.wrappers.append(fn)
         return self
 
-    def __lt__(self, other):
-        return self.new.wrap(
+    def wrapWithOperator(self, other, expression, right=False):
+        """Wrap function with given `expression` and `other` passed as left
+        argument if right=False.
+        """
+
+        def act(other, expr, prev, **kwargs):
+            return expr(
+                prev,
+                other(**kwargs) if callable(other) else other)
+
+        def ract(other, expr, prev, **kwargs):
+            return expr(
+                other(**kwargs) if callable(other) else other,
+                prev)
+
+        return self.new.wrapWith(
             functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.lt))
+                act if not right else ract, other, expression))
+
+    def __lt__(self, other):
+        return self.wrapWithOperator(other, operator.lt)
 
     def __le__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.le))
+        return self.wrapWithOperator(other, operator.le)
 
     def __eq__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.eq))
+        return self.wrapWithOperator(other, operator.eq)
 
     def __ne__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.ne))
+        return self.wrapWithOperator(other, operator.ne)
 
     def __gt__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.gt))
+        return self.wrapWithOperator(other, operator.gt)
 
     def __ge__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.ge))
+        return self.wrapWithOperator(other, operator.ge)
 
     def __add__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.add))
+        return self.wrapWithOperator(other, operator.add)
 
     def __radd__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_r_operator__,
-                other,
-                operator.add))
+        return self.wrapWithOperator(other, operator.add, right=True)
 
     def __sub__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.sub))
+        return self.wrapWithOperator(other, operator.sub)
 
     def __rsub__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_r_operator__,
-                other,
-                operator.sub))
+        return self.wrapWithOperator(other, operator.sub, right=True)
 
     def __mul__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.mul))
+        return self.wrapWithOperator(other, operator.mul)
 
     def __matmul__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.matmul))
+        return self.wrapWithOperator(other, operator.matmul)
 
     def __truediv__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.truediv))
+        return self.wrapWithOperator(other, operator.truediv)
 
     def __floordiv__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.floordiv))
+        return self.wrapWithOperator(other, operator.floordiv)
 
     def __mod__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.mod))
+        return self.wrapWithOperator(other, operator.mod)
 
     def __divmod__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                divmod))
+        return self.wrapWithOperator(other, divmod)
 
     def __pow__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.pow))
+        return self.wrapWithOperator(other, operator.pow)
 
     def __rpow__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_r_operator__,
-                other,
-                operator.pow))
+        return self.wrapWithOperator(other, operator.pow, right=True)
 
     def __lshift__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.lshift))
+        return self.wrapWithOperator(other, operator.lshift)
 
     def __rlshift__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_r_operator__,
-                other,
-                operator.lshift))
+        return self.wrapWithOperator(other, operator.lshift, right=True)
 
     def __rshift__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.rshift))
+        return self.wrapWithOperator(other, operator.rshift)
 
     def __rrshift__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_r_operator__,
-                other,
-                operator.rshift))
+        return self.wrapWithOperator(other, operator.rshift, right=True)
 
     def __and__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.and_))
+        return self.wrapWithOperator(other, operator.and_)
 
     def __xor__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.xor))
+        return self.wrapWithOperator(other, operator.xor)
 
     def __or__(self, other):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                other,
-                operator.or_))
+        return self.wrapWithOperator(other, operator.or_)
 
     def __neg__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                operator.neg))
+        return self.wrapWithOperator(None, operator.neg)
 
     def __abs__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                abs))
+        return self.wrapWithOperator(None, abs)
 
     def __invert__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                operator.invert))
+        return self.wrapWithOperator(None, operator.invert)
 
     def __round__(self, ndigits=None):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                ndigits,
-                round))
+        return self.wrapWithOperator(ndigits, round)
 
     def __trunc__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                math.trunc))
+        return self.wrapWithOperator(None, math.trunc)
 
     def __floor__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                math.floor))
+        return self.wrapWithOperator(None, math.floor)
 
     def __ceil__(self):
-        return self.new.wrap(
-            functools.partial(
-                Function.__util_operator__,
-                None,
-                math.ceil))
+        return self.wrapWithOperator(None, math.ceil)
