@@ -67,3 +67,24 @@ class Square(Rectangle):
         self.start = start
         self.end = tuple(x + size for x in start)
         self.detalization = detalization
+
+
+class Range(Space):
+    """A simple one-dimensional range of space.
+    """
+
+    def __init__(self, start: float, end: float, detalization=1e-3):
+        """Creates range with coordinates:
+        (start) -> (end)
+        """
+        self.start = start
+        self.end = end
+        self.detalization = detalization
+
+    def __iter__(self):
+        return frange(self.start, self.end, self.detalization)
+
+    def __len__(self):
+        """Get number of discrete points in this figure.
+        """
+        return abs(self.start - self.end) / self.detalization

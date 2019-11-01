@@ -228,7 +228,7 @@ class RnFunction():
 
         return d
 
-    def integral(self, variables: tuple):
+    def integral(self, variables):
         """Integrate current function by given variable names.
         """
 
@@ -247,3 +247,18 @@ class RnFunction():
             return result
 
         return s
+
+    def antiderivative(self, variables):
+        """Make antiderivative function on give vars.
+        """
+
+        fn = self.integral(variables)
+
+        def ad(change=1e-4, **params):
+            # TODO: check if `params` and `variables` in the same order
+            return fn(space=physical.Rectangle(
+                start=(0,) * len(variables),
+                end=params.values(),
+                detalization=change))
+
+        return ad
