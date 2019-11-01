@@ -6,6 +6,7 @@ import inspect
 import functools
 import operator
 import math
+import physical
 from copy import deepcopy
 
 
@@ -214,7 +215,7 @@ class RnFunction():
         is a list of names.
         """
 
-        def diff(orig, variables, change=1e-12, **params):
+        def d(change=1e-4, **params):
             newparams = {
                 name: value + (
                     change
@@ -223,7 +224,26 @@ class RnFunction():
                 for (name, value)
                 in params.items()
             }
-            return (orig(**newparams) - orig(**params)) / change
+            return (self(**newparams) - self(**params)) / change
 
-        return functools.partial(
-            diff, self, variables)
+        return d
+
+    def integral(self, variables: tuple):
+        """Integrate current function by given variable names.
+        """
+
+        def getByPoint(point: tuple):
+            """Assign point coordinates with variable names and execute the
+            function.
+            """
+            return self(**dict(zip(variables, point)))
+
+        def s(space: physical.Space):
+            # Check your space detalization to change step.
+            result = 0
+            for point in space:
+                result += getByPoint(point) * \
+                    (space.detalization ** len(variables))
+            return result
+
+        return s
