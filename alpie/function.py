@@ -255,10 +255,11 @@ class RnFunction():
         fn = self.integral(variables)
 
         def ad(change=1e-4, **params):
-            # TODO: check if `params` and `variables` in the same order
             return fn(space=physical.Rectangle(
                 start=(0,) * len(variables),
-                end=params.values(),
+                # Such list comprehension guarantee that `end` point's
+                # coordinates will have the same order as `variables` names.
+                end=(params[name] for name in variables),
                 detalization=change))
 
         return ad
