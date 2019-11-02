@@ -61,6 +61,16 @@ class RnFunction():
         self.core = Executable(fn)
         self.wrappers = []
 
+    @classmethod
+    def ensure(cls, data):
+        """Ensure if `obj` has type of this class.
+        """
+        if isinstance(data, cls):
+            return data
+
+        else:
+            return cls(fn=data)
+
     def __repr__(self):
         return "<{} core with{}wrappers>".format(
             self.core.__repr__(),
@@ -259,21 +269,21 @@ class RnFunction():
 
         return s
 
-    def antiderivative(self, variables):
+    def antiderivative(self, variables, change=1e-4):
         """Make antiderivative function on give vars.
         """
 
-        fn = self.integral(variables)
-
-        def ad(change=1e-4, **params):
-            return fn(space=physical.Rectangle(
+        def integralWrapper(integral, change, variables, prev, **params):
+            return integral(space=physical.Rectangle(
                 start=(0,) * len(variables),
                 # Such list comprehension guarantee that `end` point's
                 # coordinates will have the same order as `variables` names.
                 end=(params[name] for name in variables),
                 detalization=change))
 
-        return ad
+        return self.new.wrapWith(
+            functools.partial(
+                integralWrapper, self.integral(variables), change, variables))
 
 
 class Function(RnFunction):
@@ -301,6 +311,7 @@ class Function(RnFunction):
 
         super().wrapWithOperator(self, other, expression, right)
 
-    def __call__(self, value):
-        result = self.core(**{self.parameter: value})
-        return self.calculateWrappers(result)
+    def __call__(self, value=None, **kwargs):
+        params = {self.parameter: value} if value else kwargs
+        result = self.core(**params)
+        return self.calculateWrappers(result, **params)
