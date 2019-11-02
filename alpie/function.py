@@ -259,7 +259,7 @@ class RnFunction():
                 return self(
                     **{name: point for name in variables})
 
-        def s(space: physical.Space):
+        def worker(space: physical.Space):
             # Check your space detalization to change step.
             result = 0
             for point in space:
@@ -267,7 +267,7 @@ class RnFunction():
                     (space.detalization ** len(variables))
             return result
 
-        return s
+        return worker
 
     def antiderivative(self, variables, change=1e-4):
         """Make antiderivative function on give vars.
@@ -312,6 +312,16 @@ class Function(RnFunction):
         super().wrapWithOperator(self, other, expression, right)
 
     def __call__(self, value=None, **kwargs):
-        params = {self.parameter: value} if value else kwargs
+        params = kwargs if value is None else {self.parameter: value}
         result = self.core(**params)
         return self.calculateWrappers(result, **params)
+
+    def derivative(self, change=1e-4):
+        return super().derivative([self.parameter], change)
+
+    def integral(self):
+        return super().integral([self.parameter])
+
+    def antiderivative(self, change=1e-4):
+        return super().antiderivative([self.parameter], change)
+
