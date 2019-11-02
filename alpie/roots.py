@@ -23,7 +23,8 @@ def simpleIteration(
     m = 1 / f.derivative().findByComparison(
         physical.Range(a, b, detalization=1e-2), max)
 
-    newfunc = lambda x: x - m * f(x)
+    def phi(x):
+        return x - m * f(x)
 
     if f(a) * f(b) > 0:
         raise BadApproximation(
@@ -33,7 +34,7 @@ def simpleIteration(
 
     while True:
 
-        xn = newfunc(x)
+        xn = phi(x)
         diff = xn - x
         x = xn
 

@@ -72,7 +72,8 @@ class RnFunction():
             return cls(fn=data)
 
     def __repr__(self):
-        return "<{} core with{}wrappers>".format(
+        return "<{} of {} core with{}wrappers>".format(
+            self.__class__.__name__,
             self.core.__repr__(),
             " no " if not self.wrappers else " ")
 
@@ -285,6 +286,12 @@ class RnFunction():
             functools.partial(
                 integralWrapper, self.integral(variables), change, variables))
 
+    def grad(self, variables, change=1e-4):
+        """Returns gradient vector of current function by given variables.
+        """
+        return FunctionalVector(*[
+            self.derivative([name], change) for name in variables])
+
 
 class Function(RnFunction):
     """One-dimensional function f(x) = y.
@@ -307,9 +314,9 @@ class Function(RnFunction):
         if callable(other):
             raise ValueError(
                 "You should create multidimensional function in order to use"
-                " in functional expressions.")
+                " functional expressions.")
 
-        super().wrapWithOperator(self, other, expression, right)
+        super().wrapWithOperator(other, expression, right)
 
     def __call__(self, value=None, **kwargs):
         params = kwargs if value is None else {self.parameter: value}
@@ -353,3 +360,54 @@ class Function(RnFunction):
             found = expr(found, self(value))
 
         return found
+
+
+class ScalarVector:
+    """One-dimensional container for values.
+    """
+
+    def __init__(self, *items):
+        self.items = items
+
+    def __abs__(self):
+        return sum([el ** 2 for el in self]) ** .5
+
+    def __neg__(self):
+        return ScalarVector(*map(operator.neg, self))
+
+    def __add__(self, other):
+        return FunctionalVector(*[
+            fn + other
+            for fn in self.items])
+
+    def __mul__(self, other):
+        return FunctionalVector(*[
+            fn - other
+            for fn in self.items])
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} {self.nums}>"
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        return len(self.items)
+
+    def ofNames(self, names: list) -> dict:
+        """Zip names and self.nums into dict.
+        """
+        return {
+            name: value
+            for name, value
+            in zip(names, self.nums)}
+
+
+class FunctionalVector(ScalarVector):
+    """One-dimensional container of functions.
+    """
+
+    def __call__(self, value=None, **kwargs):
+        return ScalarVector(*[
+            fn(value) if value else fn(**kwargs)
+            for fn in self.fns])
