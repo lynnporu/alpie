@@ -45,6 +45,11 @@ class Executable():
                 in kwargs.items()
                 if name in self.parameters})
 
+    def __len__(self):
+        """Returns function dimensionality.
+        """
+        return len(self.parameters)
+
 
 class RnFunction():
     """Multidimensional function.
@@ -65,24 +70,22 @@ class RnFunction():
         return hash(self.executable, self.wrappers)
 
     def __call__(self, **kwargs):
-
         result = self.core(**kwargs)
+        return self.calculateWrappers(result, **kwargs)
+
+    def calculateWrappers(self, initial, **kwargs):
+        """Calculate initial value by all the wrappers of this function.
+        """
 
         for fn in self.wrappers:
-            result = fn(result, **kwargs)
+            initial = fn(initial, **kwargs)
 
-        return result
+        return initial
 
     def __deepcopy__(self, memdict):
         new = RnFunction(fn=self.core.executable)
         new.wrappers = deepcopy(self.wrappers)
         return new
-
-    @property
-    def parameters(self):
-        return list(set.union(
-            *[set(wrapper.parameters) for wrapper in self.wrappers],
-            set(self.core.parameters)))
 
     @property
     def new(self):
@@ -263,3 +266,33 @@ class RnFunction():
                 detalization=change))
 
         return ad
+
+
+class Function(RnFunction):
+    """One-dimensional function f(x) = y.
+    """
+
+    def __init__(self, fn):
+
+        self.core = Executable(fn)
+        if len(self.core) > 1:
+            raise ValueError(
+                "You should provide one-dimensional function.")
+
+        self.wrappers = []
+        self.parameter = self.core.parameters[0]
+
+    def wrapWithOperator(self, other, expression, right=False):
+        """Wrap function with given non-callable expression.
+        """
+
+        if callable(other):
+            raise ValueError(
+                "You should create multidimensional function in order to use"
+                " in functional expressions.")
+
+        super().wrapWithOperator(self, other, expression, right)
+
+    def __call__(self, value):
+        result = self.core(**{self.parameter: value})
+        return self.calculateWrappers(result)
