@@ -67,7 +67,7 @@ class RnFunction():
             " no " if not self.wrappers else " ")
 
     def __hash__(self):
-        return hash(self.executable, self.wrappers)
+        return hash(self.core, self.wrappers)
 
     def __call__(self, **kwargs):
         result = self.core(**kwargs)
@@ -83,7 +83,7 @@ class RnFunction():
         return initial
 
     def __deepcopy__(self, memdict):
-        new = RnFunction(fn=self.core.executable)
+        new = type(self)(fn=self.core.executable)
         new.wrappers = deepcopy(self.wrappers)
         return new
 
@@ -213,23 +213,26 @@ class RnFunction():
     def __ceil__(self):
         return self.wrapWithOperator(None, math.ceil)
 
-    def derivative(self, variables):
+    def derivative(self, variables, change=1e-4):
         """Make partial derivative function with changes on given vars. `vars`
         is a list of names.
+
+        Result is self instance.
         """
 
-        def d(change=1e-4, **params):
+        def differentialWrapper(fn, change, variables, prev, **params):
             newparams = {
-                name: value + (
-                    change
-                    if name in variables
-                    else 0)
-                for (name, value)
+                # Add change only of name in variables.
+                # a * False = 0, a * True = a
+                name: value + change * (name in variables)
+                for name, value
                 in params.items()
             }
-            return (self(**newparams) - self(**params)) / change
+            return (fn(**newparams) - prev) / change
 
-        return d
+        return self.new.wrapWith(
+            functools.partial(
+                differentialWrapper, self, change, variables))
 
     def integral(self, variables):
         """Integrate current function by given variable names.
@@ -239,7 +242,12 @@ class RnFunction():
             """Assign point coordinates with variable names and execute the
             function.
             """
-            return self(**dict(zip(variables, point)))
+            if isinstance(point, tuple):
+                return self(
+                    **dict(zip(variables, point)))
+            else:
+                return self(
+                    **{name: point for name in variables})
 
         def s(space: physical.Space):
             # Check your space detalization to change step.
