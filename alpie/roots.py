@@ -2,36 +2,42 @@
 """
 
 
-import analysis
+import function
+import physical
 
 
 class BadApproximation(Exception):
     pass
 
 
-def simpleIteration(function, a, b, accuracy=1e-6):
-    """Apply step-by-step approximation method.
+def simpleIteration(
+    f: function.Function, a, b, initial, accuracy=1e-6
+):
+    """Apply step-by-step approximation method to find roots of the following
+    expression:
+    f(...) = 0
     """
 
-    x = (a + b) / 2
+    f = function.Function.ensure(f)
 
-    if a * b < 0:
+    m = 1 / f.derivative().findByComparison(
+        physical.Range(a, b, detalization=1e-2), max)
+
+    newfunc = lambda x: x - m * f(x)
+
+    if f(a) * f(b) > 0:
         raise BadApproximation(
             "This approximation does not contain any root.")
 
-    derivative = analysis.deltaDifferentiate(function)
-
-    if function(x) * derivative(x):
-        a, b = b, a
+    x = initial
 
     while True:
 
-        x = b - (function(b) / derivative(b))
+        xn = newfunc(x)
+        diff = xn - x
+        x = xn
 
-        if abs(x - b) < accuracy:
-            b = x
-
-        else:
+        if abs(diff) < accuracy:
             break
 
     return x

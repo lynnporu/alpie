@@ -325,3 +325,31 @@ class Function(RnFunction):
     def antiderivative(self, change=1e-4):
         return super().antiderivative([self.parameter], change)
 
+    def findByComparison(self, space: physical.Range, expr):
+        """Iterates over given space with given algorithm:
+
+        found = 0
+        for value in space:
+            found = expr(found, self(value))
+        return found
+
+        Can be used in order to find maximum or minimum:
+        f.findByComparison(Range(0, 10), max)
+
+        """
+
+        if not isinstance(space, physical.Range):
+            raise TypeError("Give me physical.Range object.")
+
+        if not callable(expr):
+            raise TypeError("expr must be callable.")
+
+        found = None
+        for value in space:
+            # Pass first value
+            if found is None:
+                found = self(value)
+                continue
+            found = expr(found, self(value))
+
+        return found
