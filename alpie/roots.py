@@ -65,26 +65,35 @@ def gradientDescent(
     initial = function.ScalarVector.ensure(initial)
 
     def step(prev, vector, alpha=1):
-        """Calculates next step of descent,
+        """Calculates next step of descent. Here:
         `prev` is phi value with previous vector,
         `vector` is previous vector.
         New vector will be returned as the result.
         """
-        # Right arithmetic operators are not supported for ScalarVectors
-        calc = phigr(**vector.ofNames(variables)) * alpha + vector
-        new = phi(**calc.ofNames(variables))
 
-        if new >= prev:
-            return step(prev, vector, alpha / 2)
-        else:
-            return calc
+        alpha = 1
+        calc = None
+
+        while True:
+
+            # Right arithmetic operators are not supported for ScalarVectors
+            calc = phigr(**vector.ofNames(variables)) * alpha + vector
+            new = phi(**calc.ofNames(variables))
+
+            if new == 0:
+                break
+
+            if new >= prev:
+                alpha /= 2
+            else:
+                break
+
+        return calc
 
     while True:
 
         calc = step(
             phi(**initial.ofNames(variables)), initial)
-
-        print(calc)
 
         if max(abs(calc - initial)) < accuracy:
             break
