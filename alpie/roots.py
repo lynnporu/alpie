@@ -45,15 +45,22 @@ def simpleIteration(
     return x
 
 
-def systemGradientDescent(
-    fns: function.FunctionalVector, variables: list, initial: tuple,
-    accuracy=1e-6
+def gradientDescent(
+    executable, variables: list, initial: tuple, accuracy=1e-6
 ):
-    """Apply gradient method to given function vector.
-    `variables` is list of names.
+    """Apply gradient descent method to find roots of given function.
+    `executable` may be instance of function.RnFunction or
+    function.FunctionalVector. If `executable` is vector, then gradient
+    method will be applied to new (fn ** 2 for fn in executable) function.
+    `variables` is list of names,
+    `initial` is tuple of coordinates of initial point.
     """
 
-    phi = fns.sqrsum
+    phi = (
+        executable.sqrsum
+        if isinstance(executable, function.FunctionalVector) else
+        executable
+    )
     phigr = -phi.grad(variables)
     initial = function.ScalarVector.ensure(initial)
 
