@@ -115,14 +115,22 @@ class RnFunction():
         """
 
         def act(other, expr, prev, **kwargs):
-            return expr(
-                prev,
-                other(**kwargs) if callable(other) else other)
+            return (
+                expr(prev)
+                if other is None else
+                expr(
+                    prev,
+                    other(**kwargs) if callable(other) else other)
+            )
 
         def ract(other, expr, prev, **kwargs):
-            return expr(
-                other(**kwargs) if callable(other) else other,
-                prev)
+            return (
+                expr(prev)
+                if other is None else
+                expr(
+                    other(**kwargs) if callable(other) else other,
+                    prev)
+            )
 
         return self.new.wrapWith(
             functools.partial(
@@ -376,14 +384,18 @@ class ScalarVector:
         return type(self)(*map(operator.neg, self))
 
     def __add__(self, other):
-        return type(self)(*[
-            fn + other
-            for fn in self.items])
+        return (
+            type(self)(*[a + b for a, b in zip(self, other)])
+            if isinstance(other, ScalarVector) else
+            type(self)(*[fn + other for fn in self])
+        )
 
     def __sub__(self, other):
-        return type(self)(*[
-            fn - other
-            for fn in self])
+        return (
+            type(self)(*[a - b for a, b in zip(self, other)])
+            if isinstance(other, ScalarVector) else
+            type(self)(*[fn - other for fn in self])
+        )
 
     def __mul__(self, other):
         return (
@@ -428,7 +440,7 @@ class ScalarVector:
         return {
             name: value
             for name, value
-            in zip(names, self.items)}
+            in zip(names, self)}
 
     @classmethod
     def ensure(cls, data):
@@ -446,7 +458,7 @@ class FunctionalVector(ScalarVector):
     def __call__(self, value=None, **kwargs):
         return ScalarVector(*[
             fn(value) if value else fn(**kwargs)
-            for fn in self.items])
+            for fn in self])
 
     def __repr__(self):
         return f"<{self.__class__.__name__} of {self.dim} functions>"
