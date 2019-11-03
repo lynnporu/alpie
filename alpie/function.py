@@ -24,7 +24,7 @@ class Executable():
             self.parameters.append(name)
 
     def __hash__(self):
-        return hash(self.fn)
+        return hash(self.executable)
 
     def __repr__(self):
         return f"<Executable params=({', '.join(self.parameters)})>"
@@ -370,37 +370,73 @@ class ScalarVector:
         self.items = items
 
     def __abs__(self):
-        return sum([el ** 2 for el in self]) ** .5
+        return type(self)(*map(abs, self))
 
     def __neg__(self):
-        return ScalarVector(*map(operator.neg, self))
+        return type(self)(*map(operator.neg, self))
 
     def __add__(self, other):
-        return FunctionalVector(*[
+        return type(self)(*[
             fn + other
             for fn in self.items])
 
-    def __mul__(self, other):
-        return FunctionalVector(*[
+    def __sub__(self, other):
+        return type(self)(*[
             fn - other
-            for fn in self.items])
+            for fn in self])
+
+    def __mul__(self, other):
+        return (
+            type(self)(*map(operator.mul, zip(self, other)))
+            if isinstance(other, ScalarVector) else
+            type(self)(*[i * other for i in self])
+        )
+
+    def __truediv__(self, other):
+        return type(self)(*[i / other for i in self])
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.nums}>"
+        return f"<{self.__class__.__name__} of {self.items}>"
 
     def __iter__(self):
         return iter(self.items)
 
-    def __len__(self):
+    @property
+    def dim(self):
+        """Returns dimensionality.
+        """
         return len(self.items)
 
+    def __len__(self):
+        return self.sqrsum ** .5
+
+    @property
+    def sqrsum(self):
+        """Returns sum of squares of items in container.
+        """
+        return sum([i * i for i in self])
+
+    @property
+    def normed(self):
+        """Returns vector with length = 1.
+        """
+        return self / len(self)
+
     def ofNames(self, names: list) -> dict:
-        """Zip names and self.nums into dict.
+        """Zip names and self.items into dict.
         """
         return {
             name: value
             for name, value
-            in zip(names, self.nums)}
+            in zip(names, self.items)}
+
+    @classmethod
+    def ensure(cls, data):
+        if isinstance(data, cls):
+            return data
+
+        else:
+            return cls(*data)
 
 
 class FunctionalVector(ScalarVector):
@@ -410,4 +446,7 @@ class FunctionalVector(ScalarVector):
     def __call__(self, value=None, **kwargs):
         return ScalarVector(*[
             fn(value) if value else fn(**kwargs)
-            for fn in self.fns])
+            for fn in self.items])
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} of {self.dim} functions>"
