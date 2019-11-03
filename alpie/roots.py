@@ -4,6 +4,7 @@
 
 import function
 import physical
+from copy import deepcopy
 
 
 class BadApproximation(Exception):
@@ -42,3 +43,45 @@ def simpleIteration(
             break
 
     return x
+
+
+def systemGradientDescent(
+    fns: function.FunctionalVector, variables: list, initial: tuple,
+    accuracy=1e-6
+):
+    """Apply gradient method to given function vector.
+    `variables` is list of names.
+    """
+
+    phi = fns.sqrsum
+    phigr = -phi.grad(variables)
+    initial = function.ScalarVector.ensure(initial)
+
+    def step(prev, vector, alpha=1):
+        """Calculates next step of descent,
+        `prev` is phi value with previous vector,
+        `vector` is previous vector.
+        New vector will be returned as the result.
+        """
+        # Right arithmetic operators are not supported for ScalarVectors
+        calc = phigr(**vector.ofNames(variables)) * alpha + vector
+        new = phi(**calc.ofNames(variables))
+
+        if new >= prev:
+            return step(prev, vector, alpha / 2)
+        else:
+            return calc
+
+    while True:
+
+        calc = step(
+            phi(**initial.ofNames(variables)), initial)
+
+        print(calc)
+
+        if max(abs(calc - initial)) < accuracy:
+            break
+
+        initial = deepcopy(calc)
+
+    return initial
