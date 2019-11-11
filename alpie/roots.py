@@ -45,6 +45,28 @@ def simpleIteration(
     return x
 
 
+def chebyshevIteration2(f: function.Function, a, b, initial, accuracy=1e-6):
+    """Calculates Chebyshev iteration with r=2:
+    x_n+1 = x_n - (f(x) / f'(x)) - ((f''(x)f^2(x) / 2(f'(x)))^3
+
+    """
+
+    x = initial
+
+    while True:
+
+        xn = x - (f(x) / f.derivative()(x)) - \
+            ((f.derivative().derivative()(x) * f(x) ** 2) /
+                (2 * (f.derivative()(x)) ** 3))
+        diff = xn - x
+        x = xn
+
+        if abs(diff) < accuracy:
+            break
+
+    return x
+
+
 def gradientDescent(
     executable, variables: list, initial: tuple, accuracy=1e-6
 ):
