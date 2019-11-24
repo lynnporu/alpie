@@ -331,6 +331,35 @@ class Function(RnFunction):
         result = self.core(**params)
         return self.calculateWrappers(result, **params)
 
+    def tabulate(self, start, end, step):
+        """Returns function values in given range [start; end].
+        Produce tuples (x, f(x)).
+        """
+
+        def frange(a, b, s):
+            """Produse float range [a; b].
+            """
+            n = 0
+            current = 0
+            while current <= b:
+                yield current
+                n += 1
+                current = a + s * n
+
+        for value in frange(start, end, step):
+            yield (value, self(value))
+
+    def tabulatecoords(self, start, end, step):
+        """Alias for `tabulate` function. Returns tuple of ([x...] and [y...]).
+        """
+        x, y = list(), list()
+
+        for point, value in self.tabulate(start, end, step):
+            x.append(point)
+            y.append(value)
+
+        return x, y
+
     def derivative(self, change=1e-4):
         return super().derivative([self.parameter], change)
 
