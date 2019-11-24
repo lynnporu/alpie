@@ -31,3 +31,37 @@ def lagrange(xarr: list, yarr: list) -> function.Function:
         ])
 
     return function.Function(interpolation)
+
+
+def newton(xarr: list, yarr: list) -> function.Function:
+    """Generate Newton's polynom interpolation function for given sets of
+    x and y.
+    """
+    def pairs(iterable):
+        """Generate overlapping pairs from iterable:
+        ABCDEF -> AB BC CD DE EF
+        """
+        return zip(
+            iter(iterable),
+            itertools.islice(iter(iterable), 1, None))
+
+    diffs = [deepcopy(yarr)]
+
+    while len(diffs) < len(xarr):
+        diffs.append([
+            # TODO: work with generators
+            (y1 - y0) / (xarr[i + len(diffs)] - xarr[i])
+            for i, (y0, y1)
+            in enumerate(pairs(diffs[-1]))
+        ])
+
+    def interpolation(x):
+        result = 0
+        for i, diff in enumerate([el[0] for el in diffs]):
+            part = diff
+            for mult in range(i):
+                part *= x - xarr[mult]
+            result += part
+        return result
+
+    return function.Function(interpolation)
