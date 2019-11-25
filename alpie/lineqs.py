@@ -1,4 +1,4 @@
-"""This module includes methods for solving systems of linear equations,
+"""This module includes methods for solving systems of linear equations.
 """
 
 
@@ -111,7 +111,7 @@ def gaussInversed(matrix):
                 matrices.AugmentedMatrix(
                     coeffs=matrix,
                     eqs=matrices.Matrix.filledWith(vector).transposed))
-            .roots)
+            .roots.transposed)
 
     return new
 
@@ -157,7 +157,7 @@ def simpleIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     return matrix.fixedPointIteration(
         X,
         partial(
-            lambda C, d, x: d + C * x,
+            lambda C, d, x: d + C @ x,
             coeffsA, coeffsB),
         partial(
             difference.simpleMax if not accuracyfunc else accuracyfunc,

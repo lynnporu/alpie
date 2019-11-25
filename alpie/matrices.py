@@ -2,8 +2,8 @@
 """
 
 
-from math import floor, ceil
 from copy import deepcopy
+import math
 import numbers
 import itertools
 import operator
@@ -41,7 +41,7 @@ class MultidimensionalMatrix:
         """Ensure if given object has the same type as current class.
         """
         if isinstance(data, cls):
-            return data
+            return deepcopy(data)
 
         else:
             return cls.filledWith(data)
@@ -87,10 +87,26 @@ class MultidimensionalMatrix:
         return self
 
     @property
+    def coordinates(self):
+        """Return iterator of all coordinates in matrix.
+        """
+        return itertools.product(
+            *map(range, self.dimensions))
+
+    @property
+    def enum(self):
+        """Return iterator of all elements with its coordinates in matrix.
+        """
+        return [
+            (self.at(*position), position)
+            for position
+            in self.coordinates]
+
+    @property
     def sketch(self):
         """Returns empty matrix with same dimensions.
         """
-        return self.new.sizedAs(*self.dimensions)
+        return self.new.sizedAs(self.dimensions)
 
     @property
     def new(self):
@@ -203,6 +219,19 @@ class MultidimensionalMatrix:
 
         insert(self.data, *coordinates)
 
+    def at(self, *coordinates):
+        """Return element at given coordinates. Useful for indexing with tuples:
+        A[0][1][2] -> A.at((0, 1, 2))
+        """
+
+        def dig(array, index, *tail):
+            if not tail:
+                return array[index]
+            else:
+                return dig(array[index], *tail)
+
+        return dig(self.data, *coordinates)
+    
     def elements(self):
         """Generates elements of matrix in the recursive order.
         """
@@ -229,11 +258,26 @@ class MultidimensionalMatrix:
             unpack=True)
 
     def __mul__(self, other):
-        if not isinstance(other, numbers.Number):
-            raise ValueError("Must be number.")
+        # Scalar multiplication of two matrices.
+        if (
+            not isinstance(other, numbers.Number) and
+            self.dimensions == other.dimensions
+        ):
+            return sum(map(
+                operator.mul, self.elements(), other.elements()))
 
+        # Multiply by number.
+        else:
+            return self.mapWith(
+                lambda el: el * other)
+
+    def __truediv__(self, other):
         return self.mapWith(
-            lambda el: el * other)
+            lambda el: el / other)
+
+    def __truediv__(self, num):
+        return self.mapWith(
+            lambda el: el / num)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
@@ -250,7 +294,7 @@ class MultidimensionalMatrix:
             raise InappropriateDimensions
 
         return self.sketch.shape(
-            fill=list(map(
+            fillwith=list(map(
                 operator.sub,
                 self.elements(), other.elements())),
             unpack=True)
@@ -272,10 +316,10 @@ class MultidimensionalMatrix:
             lambda el: round(el, n))
 
     def __floor__(self):
-        return self.mapWith(floor)
+        return self.mapWith(math.floor)
 
     def __ceil__(self):
-        return self.mapWith(ceil)
+        return self.mapWith(math.ceil)
 
     def __int__(self):
         return self.mapWith(int)
@@ -342,7 +386,10 @@ class Matrix(MultidimensionalMatrix):
         return f"<Matrix dimensions={self.dimensions}>"
 
     @classmethod
-    def sizedAs(cls, height, width):
+    def sizedAs(cls, dimensions: tuple):
+        """`dimensions` is (height, width)
+        """
+        height, width = dimensions
         return cls(height=height, width=width, data=None)
 
     @classmethod
@@ -401,34 +448,26 @@ class Matrix(MultidimensionalMatrix):
                 lambda n: n ** 2,
                 self.elements())) ** .5
 
-    def __mul__(self, other):
-        # Try scalar multiplication.
-        try:
-            return (
-                MultidimensionalMatrix.filledWith(self.data) * other
-            ).convertTo(Matrix)
+    # TODO: test @ operator in algorithms
+    def __matmul__(self, other):
+        if self.dimensions[1] != other.dimensions[0]:
+            raise ValueError("These matrices can not be multiplied.")
 
-        # If not:
-        except ValueError:
-
-            if self.dimensions[1] != other.dimensions[0]:
-                raise ValueError("These matrices can not be multiplied.")
-
-            return self.new.filledWith(
+        return self.new.filledWith(
+            [
                 [
-                    [
-                        sum(
-                            el1 * el2
-                            for el1, el2
-                            in zip(row1, col2)
-                        )
-                        for col2
-                        in zip(*other.data)
-                    ]
-                    for row1
-                    in self.data
+                    sum(
+                        el1 * el2
+                        for el1, el2
+                        in zip(row1, col2)
+                    )
+                    for col2
+                    in zip(*other.data)
                 ]
-            )
+                for row1
+                in self.data
+            ]
+        )
 
     def __pow__(self, n):
         if n == -1:
@@ -450,6 +489,8 @@ class SquareMatrix(Matrix):
     def __init__(self, size=None, data=None):
         """Create [size x size] matrix.
         """
+        if isinstance(size, list):
+            size = size[0]
         if isinstance(data, list) and not size:
             self.data = data
             return
@@ -464,8 +505,25 @@ class SquareMatrix(Matrix):
         return cls(size=None, data=data)
 
     @classmethod
-    def sizedAs(cls, size):
+    def sizedAs(cls, *size):
+    	if type(size) is list:
+    		size = size[0]
         return cls(size=size, data=None)
+
+    @classmethod
+    def givens(cls, size, i, j, theta):
+        """Returns Givens matrix of given size.
+        """
+        matrix = cls.ofIdentity(size=size)
+        matrix[i][i] = matrix[j][j] = math.cos(theta)
+        matrix[i][j] = -math.sin(theta)
+        matrix[j][i] = math.sin(theta)
+        return matrix
+
+    def givensMask(self, i, j, theta):
+        """Returns Givens matrix with size of current matrix.
+        """
+        return self.new.givens(len(self), i, j, theta)
 
     @classmethod
     def zeros(cls, size):
@@ -549,6 +607,7 @@ class SquareMatrix(Matrix):
 
 class AugmentedMatrix:
 
+    # TODO: add `ensure` method.
     def __init__(self, coeffs, eqs, forwardRootsOrder=True):
         """Check A and B matrices and create augmented matrix.
 
@@ -565,6 +624,10 @@ class AugmentedMatrix:
         self.coeffs = coeffs
         self.eqs = eqs
         self.forwardRootsOrder = forwardRootsOrder
+
+    @property
+    def new(self):
+        return type(self)
 
     def inverseColumns(self):
         """Inverse columns of coefficients matrix.
@@ -595,7 +658,8 @@ class AugmentedMatrix:
         return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
 
     def __setitem__(self, key, item):
-        item = AugmentedMatrixRow.ensure(item)
+        if not isinstance(item, AugmentedMatrixRow):
+            raise ValueError("Must be AugmentedMatrixRow.")
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
 
     def __len__(self):
@@ -616,7 +680,7 @@ class AugmentedMatrix:
         """Calculate result of equations with given X vector.
         """
 
-        return self.coeffs * x
+        return self.coeffs @ x
 
     def fixedPointIteration(self, initial, iterator, accuracyfunc):
         """Solve system of linear equations by fixed-point iteration method in
@@ -669,7 +733,6 @@ class AugmentedMatrixRow:
 
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
-
 
 class NotSolvable(Exception):
     pass
@@ -729,7 +792,8 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
             for k in range(i - 1, -1, -1):
                 matrix[k][n] -= matrix[k][i] * x[0]
 
-        return x if matrix.forwardRootsOrder else x[::-1]
+        return Matrix.filledWith(
+            x if matrix.forwardRootsOrder else x[::-1]).transposed
 
 
 class TriangularMatrix(SquareMatrix):
