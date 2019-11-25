@@ -2,51 +2,61 @@
 """
 
 import matrices
+import lineqs
 import functools
 import operator
 import math
-from lineqs import gaussElimination
 
 
 class WrongInitial(Exception):
-    pass
+	pass
 
 
 def rayleighQuotient(matrix, vector):
-    """Calculates Rayleigh quotient for given matrix and vector.
-    """
-
     matrix = matrices.Matrix.ensure(matrix)
     vector = matrices.Matrix.ensure(vector)
 
-    return (
-    (matrix * vector).scalarMul(vector) / \
-    vector.scalarMul(vector))
+    return ((matrix @ vector) * vector) / vector ** 2
 
 
-def rayleighIteration(matrix, initial, num):
-    """Finds eigenvalue by Rayleigh iteration with given initial matrix.
+def powerIteration(matrix, initial, num):
+    """Perform power iteration method in order to find eigenvalue of given
+    matrix.
     """
+    matrix = matrices.SquareMatrix.ensure(matrix)
+    vector = matrices.Matrix.ensure(initial)
 
+    while num > 0:
+        vector = (matrix @ vector) / vector.euclideanNorm
+        num -= 1
+
+    return vector
+
+
+def RQIteration(matrix, initial, num, solvingfunc=None):
+    """Apply Rayleigh quotient iteration to the given matrix.
+    solvingfunc will be used in order to solve SLAE (Gaussian elimination
+    by default).
+    """
     matrix = matrices.SquareMatrix.ensure(matrix)
     initial = matrices.Matrix.ensure(initial)
 
-    if initial.euclideanNorm != 1:
-        raise WrongInitial(
-            "This method require initial matrix norm to be equal to 1.")
+    if not solvingfunc:
+        def solvingfunc(A, b):
+            return lineqs.gaussElimination(
+                matrices.AugmentedMatrix(
+                    coeffs=A, eqs=b)).roots
 
-    for _ in range(num):
-        yk = matrices.Matrix.ensure(gaussElimination(
-            matrices.AugmentedMatrix(
-                coeffs=(
-                    matrix -
-                    matrix.identityMask * rayleighQuotient(
-                        matrix, initial)),
-                eqs=initial
-            )).roots).transposed
-        initial = yk / yk.euclideanNorm
+    prevX = initial
 
-    return initial
+    while num > 0:
+        yk = solvingfunc(
+            (matrix - matrix.identityMask * rayleighQuotient(matrix, prevX)),
+            prevX)
+        prevX = yk / yk.euclideanNorm
+        num -=1
+
+    return prevX
 
 
 def jacobi(matrix, accuracy=1e-5):
@@ -85,12 +95,13 @@ def jacobi(matrix, accuracy=1e-5):
 
         H = matrix.givensMask(i, j, theta)
         hmatrices.append(H)
-        matrix = H.transposed * matrix * H
+        matrix = H.transposed @ matrix @ H
 
     return zip(
         # Make eigenpairs (eigenvalue, eigenvector).
         matrix.diagonal,
         # Multiply all H-matrices and get its rows.
         functools.reduce(
-            operator.mul, hmatrices).rows()
+            operator.matmul, hmatrices).rows()
     )
+
