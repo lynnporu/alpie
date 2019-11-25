@@ -2,8 +2,8 @@
 """
 
 
-from math import floor, ceil
 from copy import deepcopy
+import math
 import numbers
 import itertools
 import operator
@@ -283,10 +283,10 @@ class MultidimensionalMatrix:
             lambda el: round(el, n))
 
     def __floor__(self):
-        return self.mapWith(floor)
+        return self.mapWith(math.floor)
 
     def __ceil__(self):
-        return self.mapWith(ceil)
+        return self.mapWith(math.ceil)
 
     def __int__(self):
         return self.mapWith(int)
@@ -544,6 +544,14 @@ class SquareMatrix(Matrix):
     @property
     def withInversedColummns(self):
         return self.inverseAt(1)
+
+    @classmethod
+    def givens(cls, size, i, j, theta):
+        new = cls.ofIdentity(size)
+        new[i][i] = new[j][j] = math.cos(theta)
+        new[j][i] = -math.sin(theta)
+        new[i][j] = math.sin(theta)
+        return new
 
     def inverseColumns(self):
         self.inverseAt(1)
