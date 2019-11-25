@@ -9,7 +9,7 @@ import math
 
 
 class WrongInitial(Exception):
-	pass
+    pass
 
 
 def rayleighQuotient(matrix, vector):
