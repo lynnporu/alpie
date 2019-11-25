@@ -87,6 +87,22 @@ class MultidimensionalMatrix:
         return self
 
     @property
+    def coordinates(self):
+        """Return iterator of all coordinates in matrix.
+        """
+        return itertools.product(
+            *map(range, self.dimensions))
+
+    @property
+    def enum(self):
+        """Return iterator of all elements with its coordinates in matrix.
+        """
+        return [
+            (self.at(*position), position)
+            for position
+            in self.coordinates]
+
+    @property
     def sketch(self):
         """Returns empty matrix with same dimensions.
         """
@@ -203,6 +219,19 @@ class MultidimensionalMatrix:
 
         insert(self.data, *coordinates)
 
+    def at(self, *coordinates):
+        """Return element at given coordinates. Useful for indexing with tuples:
+        A[0][1][2] -> A.at((0, 1, 2))
+        """
+
+        def dig(array, index, *tail):
+            if not tail:
+                return array[index]
+            else:
+                return dig(array[index], *tail)
+
+        return dig(self.data, *coordinates)
+    
     def elements(self):
         """Generates elements of matrix in the recursive order.
         """
@@ -245,6 +274,10 @@ class MultidimensionalMatrix:
     def __truediv__(self, other):
         return self.mapWith(
             lambda el: el / other)
+
+    def __truediv__(self, num):
+        return self.mapWith(
+            lambda el: el / num)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
@@ -472,8 +505,25 @@ class SquareMatrix(Matrix):
         return cls(size=None, data=data)
 
     @classmethod
-    def sizedAs(cls, size):
+    def sizedAs(cls, *size):
+    	if type(size) is list:
+    		size = size[0]
         return cls(size=size, data=None)
+
+    @classmethod
+    def givens(cls, size, i, j, theta):
+        """Returns Givens matrix of given size.
+        """
+        matrix = cls.ofIdentity(size=size)
+        matrix[i][i] = matrix[j][j] = math.cos(theta)
+        matrix[i][j] = -math.sin(theta)
+        matrix[j][i] = math.sin(theta)
+        return matrix
+
+    def givensMask(self, i, j, theta):
+        """Returns Givens matrix with size of current matrix.
+        """
+        return self.new.givens(len(self), i, j, theta)
 
     @classmethod
     def zeros(cls, size):
@@ -545,14 +595,6 @@ class SquareMatrix(Matrix):
     def withInversedColummns(self):
         return self.inverseAt(1)
 
-    @classmethod
-    def givens(cls, size, i, j, theta):
-        new = cls.ofIdentity(size)
-        new[i][i] = new[j][j] = math.cos(theta)
-        new[j][i] = -math.sin(theta)
-        new[i][j] = math.sin(theta)
-        return new
-
     def inverseColumns(self):
         self.inverseAt(1)
 
@@ -582,6 +624,10 @@ class AugmentedMatrix:
         self.coeffs = coeffs
         self.eqs = eqs
         self.forwardRootsOrder = forwardRootsOrder
+
+    @property
+    def new(self):
+        return type(self)
 
     def inverseColumns(self):
         """Inverse columns of coefficients matrix.
@@ -627,7 +673,7 @@ class AugmentedMatrix:
         return out
 
     def __deepcopy__(self, memdict):
-        return type(self)(
+        return self.new(
             **deepcopy(self.__dict__))
 
     def calculate(self, x):
@@ -687,7 +733,6 @@ class AugmentedMatrixRow:
 
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
-
 
 class NotSolvable(Exception):
     pass
