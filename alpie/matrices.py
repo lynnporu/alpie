@@ -979,3 +979,51 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
 
         return PlainMatrix(
             x[::-1] if matrix.forwardRootsOrder else x).transposed
+
+
+class SequenceMatrix(Matrix):
+    """This interface defines a matrix which elements can be stored in several
+    sequences of numbers. For example, you shouldn't save all to zeros for
+    diagonal matrix.
+    """
+
+    def __init__(self, *sequences):
+        """Init matrix with given sequences. Note, here we don't define how to
+        interpret them.
+        """
+        if not sequences:
+            self.sequences = []
+            return
+
+        if len(sequences) == 1:
+            self.sequence = sequences[0]
+
+        self.sequences = sequences
+
+    @property
+    def elements(self):
+        return itertools.chain(*self.sequences)
+
+    def __eq__(self, other):
+        if not isinstance(other, SequenceMatrix):
+            raise TypeError(
+                "Can't compare this matrix with not SequenceMatrix.")
+
+        else:
+            return all(
+                [a == b for a, b in zip(self.sequences, other.sequences)])
+
+    def __bool__(self):
+        return all(self.sequences)
+
+    def __str__(self):
+        return "\n".join(
+            [f"{i}: {seq}" for i, seq in enumerate(self.sequences)])
+
+    def __repr__(self):
+        return f"<SequenceMatrix with {len(self.sequences)} sequences>"
+
+    def __deepcopy__(self):
+        return self.new(deepcopy(self.sequences))
+
+    # getters and setters are not implemented at this level
