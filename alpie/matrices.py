@@ -3,7 +3,6 @@
 
 
 from copy import deepcopy
-import pprint
 import math
 import numbers
 import itertools
@@ -114,7 +113,7 @@ class ListMatrix(Matrix):
     def sizedAs(cls, dimensions: tuple):
         """Creates matrix filled with None objects with given dimension.
         """
-        return cls.shape(None, dimensions)
+        return cls.empty().shape(fillwith=None, dimensions=dimensions)
 
     def clear(self):
         """Clear self.data.
@@ -161,6 +160,14 @@ class ListMatrix(Matrix):
 
         return self
 
+    @classmethod
+    def zeros(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(0)
+
+    @classmethod
+    def ones(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(1)
+
     @property
     def dimensions(self):
         """Measure dimensions of data.
@@ -189,7 +196,7 @@ class ListMatrix(Matrix):
 
     @classmethod
     def empty(cls):
-        return cls.new(list())
+        return cls(list())
 
     @property
     def sketch(self):
@@ -334,7 +341,7 @@ class ListMatrix(Matrix):
         return bool(self.data)
 
     def __str__(self):
-        return [str(row) for row in self.data].join("\n")
+        return "\n".join([str(row) for row in self.data])
 
     def __repr__(self):
         return f"<ListMatrix dimensions={self.dimensions}>"
@@ -439,18 +446,10 @@ class PlainMatrix(ListMatrix):
     def sizedAs(cls, dimensions):
         """`dimensions` is (height, width)
         """
-        if len(dimensions) > 2:
+        if len(dimensions) != 2:
             raise TypeError(
                 "You're trying to create not two dimensional matrix")
         return super().sizedAs(dimensions)
-
-    @classmethod
-    def zeros(cls, dimensions):
-        return cls.sizedAs(dimensions).shape(0)
-
-    @classmethod
-    def ones(cls, dimensions):
-        return cls.sizedAs(dimensions).shape(0)
 
     def rows(self):
         """Generate rows.
@@ -477,12 +476,12 @@ class PlainMatrix(ListMatrix):
     @property
     def transposed(self):
         if len(self.dimensions) == 1:
-            return self.new.filledWith(
+            return self.new(
                 [[el] for el in self.data]
             )
 
         else:
-            return self.new.filledWith(
+            return self.new(
                 [list(row)
                     for row in
                     zip(*self.data)])
@@ -519,7 +518,7 @@ class PlainMatrix(ListMatrix):
             raise ValueError("These matrices can not be multiplied.")
 
         # Result might have another dimension than multipliers
-        return Matrix.filledWith(
+        return PlainMatrix(
             [
                 [
                     sum(
@@ -722,6 +721,10 @@ class DoubleListMatrix(Matrix):
     lists. For example, augmented matrix or some sort of matrices which should
     be processed simultaneously.
 
+    Childs of this class should also implements these methods:
+        @property listable:
+            Returns current matrix as ListMatrix.
+
     Properties:
         list left
         list right
@@ -734,6 +737,10 @@ class DoubleListMatrix(Matrix):
         self.left = deepcopy(left)
         self.right = deepcopy(right)
 
+    @property
+    def listable(self):
+        raise NotImplemented
+
     @classmethod
     def ensure(cls, data):
 
@@ -742,7 +749,7 @@ class DoubleListMatrix(Matrix):
 
         else:
             raise TypeError(
-                f"{cls.__name__ expected.}")
+                f"{cls.__name__} expected.")
 
     def clear(self):
         """Clear data.
@@ -762,7 +769,7 @@ class DoubleListMatrix(Matrix):
         return self.left == other.left and self.right == other.right
 
     def __bool__(self):
-        return bool(left) or bool(right)
+        return bool(self.left) or bool(self.right)
 
     def __str__(self):
         return [
@@ -796,12 +803,16 @@ class AugmentedMatrix(DoubleListMatrix):
         coeffs = PlainMatrix.ensure(coeffs)
         eqs = PlainMatrix.ensure(eqs)
 
-        if eqs.dimensions != [coeffs.dimensions[0], 1]:
+        if eqs.dimensions != (coeffs.dimensions[0], 1):
             raise ValueError("Incorrect system.")
 
         self.left = coeffs
         self.right = eqs
         self.forwardRootsOrder = forwardRootsOrder
+
+    def listable(self):
+        return PlainMatrix(
+            [a + b for a, b in zip(self.left, self.right)])
 
     def inverseColumns(self):
         """Inverse columns of coefficients matrix.
@@ -823,31 +834,31 @@ class AugmentedMatrix(DoubleListMatrix):
 
     def __repr__(self):
         return (
-            f"<AugmentedMatrix equations={len(self.coeffs)} "
-            f"variables={self.coeffs.dimensions[1]}>"
+            f"<AugmentedMatrix equations={len(self.left)} "
+            f"variables={self.left.dimensions[1]}>"
         )
 
     def __getitem__(self, key):
-        return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
+        return AugmentedMatrixRow(self.left[key], self.right[key])
 
     def __setitem__(self, key, item):
         if not isinstance(item, AugmentedMatrixRow):
             raise ValueError("Must be AugmentedMatrixRow.")
-        self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
+        self.left[key], self.right[key] = item.left, item.right
 
     def __len__(self):
-        return len(self.coeffs)
+        return len(self.left)
 
     def __str__(self):
         out = str()
-        for coeffs, equation in zip(self.coeffs, self.eqs):
+        for coeffs, equation in zip(self.left, self.right):
             out += "\t".join(map(str, coeffs)) + \
                 "\t|\t" + str(equation[0]) + "\n"
         return out
 
     def __deepcopy__(self, memdict):
         return self.new(
-            **deepcopy(self.__dict__))
+            deepcopy(self.left), deepcopy(self.right))
 
     def calculate(self, x: PlainMatrix):
         """Calculate result of equations with given X vector.
@@ -883,19 +894,22 @@ class AugmentedMatrixRow(DoubleListMatrix):
 
     def __getitem__(self, key):
 
-        if key <= len(self.coeffs) - 1:
-            return self.coeffs[key]
+        if key <= len(self.left) - 1:
+            return self.left[key]
 
         else:
-            return self.eq[0]
+            return self.right[0]
 
     def __setitem__(self, key, item):
 
-        if key <= len(self.coeffs) - 1:
-            self.coeffs[key] = item
+        if key <= len(self.left) - 1:
+            self.left[key] = item
 
         else:
-            self.eq[0] = item
+            self.right[0] = item
+
+    def __str__(self):
+        return f"{self.left} | {self.right}"
 
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
@@ -916,8 +930,8 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
 
     def __repr__(self):
         return (
-            f"<EliminatedAugmentedMatrix equations={len(self.coeffs)} "
-            f"variables={self.coeffs.dimensions[1]}>")
+            f"<EliminatedAugmentedMatrix equations={len(self.left)} "
+            f"variables={self.left.dimensions[1]}>")
 
     @property
     def upperRight(self):
@@ -926,15 +940,15 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
         """
         new = deepcopy(self)
 
-        if new.coeffs.isUpperRight:
+        if new.left.isUpperRight:
             return new
 
-        if new.coeffs.isUpperLeft:
+        if new.left.isUpperLeft:
             new.inverseColumns()
-        elif new.coeffs.isLowerLeft:
+        elif new.left.isLowerLeft:
             new.inverseColumns()
             new.inverseRows()
-        elif new.coeffs.isLowerRight:
+        elif new.left.isLowerRight:
             new.inverseRows()
 
         return new
@@ -949,7 +963,7 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
 
         x = list()
 
-        for row, eq in zip(reversed(self.coeffs), reversed(self.eqs)):
+        for row, eq in zip(reversed(self.left), reversed(self.right)):
 
             seq = 0
 
@@ -964,5 +978,5 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
                     x.append((eq[0] - seq) / coeff)
                     break
 
-        return Matrix.filledWith(
+        return PlainMatrix(
             x[::-1] if matrix.forwardRootsOrder else x).transposed
