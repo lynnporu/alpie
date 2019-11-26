@@ -25,7 +25,7 @@ class Matrix:
             Returns object of current class.
         @classmethod empty(cls):
             Returns empty object of this class.
-        @property elements:
+        elements:
             Generates elements of the matrix in the recursive order
         __eq__(self, other)
         __bool__(self)
@@ -56,7 +56,6 @@ class Matrix:
         """
         return cls(*args, **kwargs)
 
-    @property
     def elements(self):
         raise NotImplemented
 
