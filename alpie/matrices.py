@@ -500,6 +500,20 @@ class PlainMatrix(ListMatrix):
                 lambda n: n ** 2,
                 self.elements())) ** .5
 
+    @property
+    def withInversedRows(self):
+        return self.inversedAt(0)
+
+    def inverseRows(self):
+        self.inverseAt(0)
+
+    @property
+    def withInversedColummns(self):
+        return self.inverseAt(1)
+
+    def inverseColumns(self):
+        self.inverseAt(1)
+
     def __matmul__(self, other):
         if self.dimensions[1] != other.dimensions[0]:
             raise ValueError("These matrices can not be multiplied.")
@@ -640,25 +654,67 @@ class SquareMatrix(PlainMatrix):
         square = list(map(tuple, self.data))
         return square == list(zip(*square))
 
-    @property
-    def withInversedRows(self):
-        return self.inversedAt(0)
-
-    def inverseRows(self):
-        self.inverseAt(0)
-
-    @property
-    def withInversedColummns(self):
-        return self.inverseAt(1)
-
-    def inverseColumns(self):
-        self.inverseAt(1)
-
     def zeroDiagonal(self):
         """Make diagonal of this matrix equal to zero.
         """
         for i in range(len(self)):
             self[i][i] = 0
+
+
+class TriangularMatrix(SquareMatrix):
+
+    def __init__(self, data, sign=1):
+        super().__init__(data)
+        self.sign = sign
+
+        if self.lookCorners == [True] * 4:
+            # Not very precious, but ok.
+            raise ValueError("Given data is not triangular.")
+
+    def __repr__(self):
+        return f"<TriangularMatrix dimensions={self.dimensions}>"
+
+    @property
+    def lookCorners(self):
+        """Return list of 4 elements, where each one represents whether the
+        value of a specific corner is presented. The result has such format:
+        [upper-left, upper-right, lower-left, lower-right].
+        For example, if we have such matrix:
+        1 1 ... 1
+        0 1 ... 1
+        ...
+        0 0 ... 0
+        then function will return [True, True, False, True]
+        """
+        return [
+            self[0][0] != 0,
+            self[0][-1] != 0,
+            self[-1][0] != 0,
+            self[-1][-1] != 0
+        ]
+
+    @property
+    def isUpperLeft(self):
+        return self.lookCorners == [True, True, True, False]
+
+    @property
+    def isUpperRight(self):
+        return self.lookCorners == [True, True, False, True]
+
+    @property
+    def isLowerLeft(self):
+        return self.lookCorners == [True, False, True, True]
+
+    @property
+    def isLowerRight(self):
+        return self.lookCorners == [False, True, True, True]
+
+    @property
+    def det(self):
+        return self.sign * self.diagmul
+
+    def __setitem__(self, *args):
+        raise NotImplemented
 
 
 class DoubleListMatrix(Matrix):
@@ -726,48 +782,44 @@ class DoubleListMatrix(Matrix):
         return [self.left, self.right][key]
 
 
-class AugmentedMatrix:
+class AugmentedMatrix(DoubleListMatrix):
 
-    # TODO: add `ensure` method.
-    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
+    def __init__(
+        self, coeffs: PlainMatrix, eqs: PlainMatrix, forwardRootsOrder=True
+    ):
         """Check A and B matrices and create augmented matrix.
 
         `forwardRootsOrder` == False means that calculated x1..xn should be
         inverted into xn..x1 in order to represent real X vector.
         This can happen when columns of coefficients matrix was swapped.
         """
-        coeffs = Matrix.ensure(coeffs)
-        eqs = Matrix.ensure(eqs)
+        coeffs = PlainMatrix.ensure(coeffs)
+        eqs = PlainMatrix.ensure(eqs)
 
         if eqs.dimensions != [coeffs.dimensions[0], 1]:
             raise ValueError("Incorrect system.")
 
-        self.coeffs = coeffs
-        self.eqs = eqs
+        self.left = coeffs
+        self.right = eqs
         self.forwardRootsOrder = forwardRootsOrder
-
-    @property
-    def new(self):
-        return type(self)
 
     def inverseColumns(self):
         """Inverse columns of coefficients matrix.
         """
-        self.coeffs.inverseColumns()
+        self.left.inverseColumns()
         self.forwardRootsOrder = not self.forwardRootsOrder
 
     def inverseRows(self):
         """Inverse columns of coefficients and `eqs` matrix.
         """
-        self.coeffs.inverseRows()
-        self.eqs.inverseAt(0)
+        self.left.inverseRows()
+        self.right.inverseAt(0)
 
     @classmethod
     def withZeroEqs(cls, coeffs):
         return cls(
             coeffs,
-            eqs=Matrix(
-                data=[[1]] * coeffs.dimensions[0]))
+            eqs=PlainMatrix([[1]] * coeffs.dimensions[0]))
 
     def __repr__(self):
         return (
@@ -784,7 +836,7 @@ class AugmentedMatrix:
         self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
 
     def __len__(self):
-        return self.coeffs.dimensions[0]
+        return len(self.coeffs)
 
     def __str__(self):
         out = str()
@@ -797,11 +849,10 @@ class AugmentedMatrix:
         return self.new(
             **deepcopy(self.__dict__))
 
-    def calculate(self, x):
+    def calculate(self, x: PlainMatrix):
         """Calculate result of equations with given X vector.
         """
-
-        return self.coeffs @ x
+        return self.left @ PlainMatrix.ensure(x)
 
     def fixedPointIteration(self, initial, iterator, accuracyfunc):
         """Solve system of linear equations by fixed-point iteration method in
@@ -826,12 +877,9 @@ class AugmentedMatrix:
         return X
 
 
-class AugmentedMatrixRow:
-
-    def __init__(self, coeffs, eq):
-
-        self.coeffs = coeffs
-        self.eq = eq
+class AugmentedMatrixRow(DoubleListMatrix):
+    """This class represents a row of augmented matrix.
+    """
 
     def __getitem__(self, key):
 
@@ -849,18 +897,16 @@ class AugmentedMatrixRow:
         else:
             self.eq[0] = item
 
-    def __str__(self):
-        return str(self.coeffs + self.eq)
-
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
 
 
 class NotSolvable(Exception):
+    """Raises when roots cannot be found using current method.
+    """
     pass
 
 
-# TODO: Test this class.
 class EliminatedAugmentedMatrix(AugmentedMatrix):
 
     def __init__(self, coeffs, eqs, forwardRootsOrder=True):
@@ -920,64 +966,3 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
 
         return Matrix.filledWith(
             x[::-1] if matrix.forwardRootsOrder else x).transposed
-
-
-class TriangularMatrix(SquareMatrix):
-
-    def __init__(self, data, size=None, sign=1):
-        if size:
-            raise TypeError("Size doesn't matter.")
-
-        self.sign = sign
-        self.data = data
-
-        if self.lookCorners == [True] * 4:
-            raise ValueError("Given data is not triangular.")
-
-    def __repr__(self):
-        return f"<TriangularMatrix dimensions={self.dimensions}>"
-
-    @property
-    def lookCorners(self):
-        """Return list of 4 elements, where each one represents whether the
-        value of a specific corner is presented. The result has such format:
-        [upper-left, upper-right, lower-left, lower-right].
-        For example, if we have such matrix:
-        1 1 ... 1
-        0 1 ... 1
-        ...
-        0 0 ... 0
-        then function will return [True, True, False, True]
-        """
-        return [
-            self[0][0] != 0,
-            self[0][-1] != 0,
-            self[-1][0] != 0,
-            self[-1][-1] != 0
-        ]
-
-    @property
-    def isUpperLeft(self):
-        return self.lookCorners == [True, True, True, False]
-
-    @property
-    def isUpperRight(self):
-        return self.lookCorners == [True, True, False, True]
-
-    @property
-    def isLowerLeft(self):
-        return self.lookCorners == [True, False, True, True]
-
-    @property
-    def isLowerRight(self):
-        return self.lookCorners == [False, True, True, True]
-
-    @property
-    def det(self):
-        return self.sign * self.diagmul
-
-    def __deepcopy__(self, memdict):
-        return self.new(**deepcopy(self.__dict__))
-
-    def __setitem__(self, *args):
-        raise TypeError("Assigning is not allowed.")
