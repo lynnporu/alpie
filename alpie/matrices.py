@@ -428,33 +428,29 @@ class ListMatrix(Matrix):
         return cls(self.data)
 
 
-class Matrix(MultidimensionalMatrix):
-
-    def __init__(self, height=None, width=None, data=None):
-        """Create [height x width] matrix.
-        """
-        if isinstance(data, list):
-            self.data = data
-        else:
-            return super().__init__([height, width], data)
+class PlainMatrix(ListMatrix):
+    """This class represents a simple two dimensional matrix.
+    """
 
     def __repr__(self):
-        return f"<Matrix dimensions={self.dimensions}>"
+        return f"<PlainMatrix dimensions={self.dimensions}>"
 
     @classmethod
-    def sizedAs(cls, dimensions: tuple):
+    def sizedAs(cls, dimensions):
         """`dimensions` is (height, width)
         """
-        height, width = dimensions
-        return cls(height=height, width=width, data=None)
+        if len(dimensions) > 2:
+            raise TypeError(
+                "You're trying to create not two dimensional matrix")
+        return super().sizedAs(dimensions)
 
     @classmethod
-    def filledWith(cls, data):
-        return cls(height=None, width=None, data=data)
+    def zeros(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(0)
 
     @classmethod
-    def zeros(cls, height, width):
-        return cls(height, width, data=0)
+    def ones(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(0)
 
     def rows(self):
         """Generate rows.
@@ -468,12 +464,12 @@ class Matrix(MultidimensionalMatrix):
         for n in range(self.dimensions[1]):
             yield [row[n] for row in self.data]
 
-    def getRow(self, n):
+    def row(self, n):
         """Returns n-th row.
         """
         return self.data[n]
 
-    def getColumn(self, n):
+    def column(self, n):
         """Returns n-th column.
         """
         return [row[n] for row in self.data]
