@@ -3,6 +3,7 @@
 
 
 from copy import deepcopy
+import pprint
 import math
 import numbers
 import itertools
@@ -81,38 +82,44 @@ class Matrix:
     def __setitem__(self, key, item):
         raise NotImplemented
 
-class MultidimensionalMatrix:
 
-    def __init__(self, dimensions=None, data=None):
-        """Create matrix with given dimensions and fill it with None OR create
-        matrix and assign it with data.
+class ListMatrix(Matrix):
+    """This interface defines a matrix which elements should be stored in a
+    single list object which is usually not one-dimensional. For example, all
+    the elements of the diagonal or tridiagonal matrix you can store with a
+    bunch (or just a single) sequence of numbers.
+
+    Properties:
+        list data:
+            Usually the place where elements stored in.
+        tuple dimensions:
+            Tuple of dimensions of this matrix.
+
+    """
+
+    def __init__(self, data: list):
+        """Create a matrix with given data.
         """
-        if not dimensions and isinstance(data, list):
-            self.data = deepcopy(data)
-
-        elif not dimensions and not data:
-            raise ValueError("Check docstring for help.")
-
-        else:
-            self.shape(data, dimensions)
-
-    @classmethod
-    def sizedAs(cls, dimensions):
-        return cls(dimensions, None)
-
-    @classmethod
-    def filledWith(cls, data):
-        return cls(None, data)
+        self.data = deepcopy(data)
 
     @classmethod
     def ensure(cls, data):
-        """Ensure if given object has the same type as current class.
-        """
-        if isinstance(data, cls):
-            return deepcopy(data)
 
+        if isinstance(data, cls):
+            return data
         else:
-            return cls.filledWith(data)
+            return cls(data)
+
+    @classmethod
+    def sizedAs(cls, dimensions: tuple):
+        """Creates matrix filled with None objects with given dimension.
+        """
+        return cls.shape(None, dimensions)
+
+    def clear(self):
+        """Clear self.data.
+        """
+        self.data = list()
 
     def shape(
         self, fillwith=None, dimensions=None, unpack=False,
@@ -127,7 +134,7 @@ class MultidimensionalMatrix:
         if not dimensions:
             dimensions = self.dimensions
 
-        self.data = list()
+        self.clear()
 
         def fill(array, size, *coords):
 
@@ -155,41 +162,6 @@ class MultidimensionalMatrix:
         return self
 
     @property
-    def coordinates(self):
-        """Return iterator of all coordinates in matrix.
-        """
-        return itertools.product(
-            *map(range, self.dimensions))
-
-    @property
-    def enum(self):
-        """Return iterator of all elements with its coordinates in matrix.
-        """
-        return [
-            (self.at(*position), position)
-            for position
-            in self.coordinates]
-
-    @property
-    def sketch(self):
-        """Returns empty matrix with same dimensions.
-        """
-        return self.new.sizedAs(self.dimensions)
-
-    @property
-    def new(self):
-        """Return current class.
-        """
-
-        return type(self)
-
-    @classmethod
-    def empty(cls):
-        """Creates empty matrix.
-        """
-        return cls.filledWith([])
-
-    @property
     def dimensions(self):
         """Measure dimensions of data.
         """
@@ -213,7 +185,72 @@ class MultidimensionalMatrix:
 
         measure(self.data)
 
-        return coords
+        return tuple(coords)
+
+    @classmethod
+    def empty(cls):
+        return cls.new(list())
+
+    @property
+    def sketch(self):
+        """Returns empty matrix with same dimensions.
+        """
+        return self.new.sizedAs(self.dimensions)
+
+    @property
+    def elements(self):
+        """Generates elements of matrix in the recursive order.
+        """
+        def flat(array):
+            for el in array:
+                if isinstance(el, list):
+                    for subel in flat(el):
+                        yield subel
+                else:
+                    yield el
+
+        return flat(self.data)
+
+    @property
+    def coordinates(self):
+        """Return iterator of all coordinates in matrix.
+        """
+        return itertools.product(
+            *map(range, self.dimensions))
+
+    def at(self, *coordinates):
+        """Return element at given coordinates. Useful for indexing with tuples:
+        A[0][1][2] -> A.at(0, 1, 2)
+        """
+
+        def dig(array, index, *tail):
+            if not tail:
+                return array[index]
+            else:
+                return dig(array[index], *tail)
+
+        return dig(self.data, *coordinates)
+
+    @property
+    def enum(self):
+        """Return iterator of all elements with its coordinates in matrix.
+        """
+        return [
+            (self.at(*position), position)
+            for position
+            in self.coordinates]
+
+    def mapWith(self, function, new=True):
+        """Map elements of matrix with a given function and returns the result.
+        If new=True, original elements won't be changed.
+        """
+
+        matrix = self if not new else deepcopy(self)
+
+        return matrix.shape(
+            fillwith=list(map(
+                function, matrix.elements())),
+            unpack=True)
 
     def inversedAt(self, *dimensions):
         """Inverse matrix at each given dimension depth.
@@ -250,7 +287,7 @@ class MultidimensionalMatrix:
         except TypeError:
             raise InappropriateDimensions
 
-        return self.new.filledWith(new)
+        return self.new(new)
 
     def inverseAt(self, *dimensions):
         """Alias for `inversedAt` method.
@@ -287,43 +324,29 @@ class MultidimensionalMatrix:
 
         insert(self.data, *coordinates)
 
-    def at(self, *coordinates):
-        """Return element at given coordinates. Useful for indexing with tuples:
-        A[0][1][2] -> A.at((0, 1, 2))
-        """
+    def __eq__(self, other):
+        if not isinstance(other, ListMatrix):
+            raise TypeError("Can't compare ListMatrix with something else.")
 
-        def dig(array, index, *tail):
-            if not tail:
-                return array[index]
-            else:
-                return dig(array[index], *tail)
+        return self.data == other.data
 
-        return dig(self.data, *coordinates)
-    
-    def elements(self):
-        """Generates elements of matrix in the recursive order.
-        """
-        def flat(array):
-            for el in array:
-                if isinstance(el, list):
-                    for subel in flat(el):
-                        yield subel
-                else:
-                    yield el
+    def __bool__(self):
+        return bool(self.data)
 
-        return flat(self.data)
+    def __str__(self):
+        return pprint.pprint(self.data)
 
-    def mapWith(self, function, new=True):
-        """Map elements of matrix with a given function and returns the result.
-        If new=True, original elements won't be changed.
-        """
+    def __repr__(self):
+        return f"<ListMatrix dimensions={self.dimensions}>"
 
-        matrix = self if not new else deepcopy(self)
+    def __deepcopy__(self, memdict):
+        return self.new(deepcopy(self.data))
 
-        return matrix.shape(
-            fillwith=list(map(
-                function, matrix.elements())),
-            unpack=True)
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
 
     def __mul__(self, other):
         # Scalar multiplication of two matrices.
@@ -342,10 +365,6 @@ class MultidimensionalMatrix:
     def __truediv__(self, other):
         return self.mapWith(
             lambda el: el / other)
-
-    def __truediv__(self, num):
-        return self.mapWith(
-            lambda el: el / num)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
@@ -366,12 +385,6 @@ class MultidimensionalMatrix:
                 operator.sub,
                 self.elements(), other.elements())),
             unpack=True)
-
-    def __eq__(self, other):
-        return self.data == other.data
-
-    def __bool__(self):
-        return len(self) > 0
 
     def __neg__(self):
         return self * -1
@@ -404,40 +417,15 @@ class MultidimensionalMatrix:
     def __hex__(self):
         return self.mapWith(hex)
 
-    def __str__(self):
-        out = str()
-        for row in self.data:
-            out += str(row) + "\n"
-        return out
-
-    def __repr__(self):
-        return f"<MultidimensionalMatrix dimensions={self.dimensions}>"
-
     def __len__(self):
         """Returns first dimension.
         """
         return len(self.data)
 
-    def __deepcopy__(self, memdict):
-        return self.new.filledWith(deepcopy(self.data))
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, item):
-        self.data[key] = item
-
-    def __hash__(self):
-        return int(
-            "".join(
-                map(
-                    lambda n: f'{n:03}',
-                    itertools.chain(self.dimensions, self.elements()))))
-
     def convertTo(self, cls):
         """Create new exemplar of given class with data of current one.
         """
-        return cls.filledWith(self.data)
+        return cls(self.data)
 
 
 class Matrix(MultidimensionalMatrix):
