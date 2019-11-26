@@ -536,31 +536,33 @@ class PlainMatrix(ListMatrix):
         return new
 
 
-class SquareMatrix(Matrix):
-
-    def __init__(self, size=None, data=None):
-        """Create [size x size] matrix.
-        """
-        if isinstance(size, list):
-            size = size[0]
-        if isinstance(data, list) and not size:
-            self.data = data
-            return
-        else:
-            return super().__init__(size, size, data)
+class SquareMatrix(PlainMatrix):
 
     def __repr__(self):
         return f"<SquareMatrix size={len(self)}>"
 
     @classmethod
-    def filledWith(cls, data):
-        return cls(size=None, data=data)
+    def sizedAs(cls, dimensions):
 
-    @classmethod
-    def sizedAs(cls, *size):
-        if type(size) is list:
-            size = size[0]
-        return cls(size=size, data=None)
+        if type(dimensions) is int:
+            dimensions = (dimensions, dimensions)
+
+        elif type(dimensions) is tuple:
+            if len(dimensions) > 2:
+                raise TypeError(
+                    "You're trying to create square matrix with dimension "
+                    "more than two")
+            elif len(dimensions) == 2 and dimensions[0] != dimensions[1]:
+                raise TypeError(
+                    "You're passing dimensions of rectangle matrix into "
+                    "constructor of square matrix.")
+            else:
+                dimensions = (dimensions[0], dimensions[0])
+
+        else:
+            raise TypeError
+
+        return super().sizedAs(dimensions)
 
     @classmethod
     def givens(cls, size, i, j, theta):
@@ -579,16 +581,18 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def zeros(cls, size):
-        return cls(size=size, data=0)
+        return super().zeros((size, size))
+
+    @classmethod
+    def ones(cls, size):
+        return super().ones((size, size))
 
     @property
     def diagonal(self):
         """Generate diagonal of the matrix.
         """
         return (
-            row[i]
-            for i, row
-            in enumerate(self.data))
+            row[i] for i, row in enumerate(self.data))
 
     @property
     def antidiagonal(self):
@@ -614,7 +618,7 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def ofIdentity(cls, size):
-        return cls.filledWith([
+        return cls([
             [
                 1 if ncell == nrow else 0
                 for ncell
