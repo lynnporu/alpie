@@ -334,7 +334,7 @@ class ListMatrix(Matrix):
         return bool(self.data)
 
     def __str__(self):
-        return pprint.pprint(self.data)
+        return [str(row) for row in self.data].join("\n")
 
     def __repr__(self):
         return f"<ListMatrix dimensions={self.dimensions}>"
@@ -659,6 +659,71 @@ class SquareMatrix(PlainMatrix):
         """
         for i in range(len(self)):
             self[i][i] = 0
+
+
+class DoubleListMatrix(Matrix):
+    """This interface defines a matrix which elements should be stored in two
+    lists. For example, augmented matrix or some sort of matrices which should
+    be processed simultaneously.
+
+    Properties:
+        list left
+        list right
+
+    """
+
+    def __init__(self, left: list, right: list):
+        """Create a matrix with given data.
+        """
+        self.left = deepcopy(left)
+        self.right = deepcopy(right)
+
+    @classmethod
+    def ensure(cls, data):
+
+        if isinstance(data, cls):
+            return data
+
+        else:
+            raise TypeError(
+                f"{cls.__name__ expected.}")
+
+    def clear(self):
+        """Clear data.
+        """
+        self.left = list()
+        self.right = list()
+
+    @classmethod
+    def empty(cls):
+        return cls(list(), list())
+
+    def __eq__(self, other):
+        if not isinstance(other, DoubleListMatrix):
+            raise TypeError(
+                "Can't compare DoubleListMatrix with some other sort "
+                "of matrices.")
+        return self.left == other.left and self.right == other.right
+
+    def __bool__(self):
+        return bool(left) or bool(right)
+
+    def __str__(self):
+        return [
+            f"{str(left)}\t{str(right)}"
+            for left, right
+            in zip(self.left, self.right)]
+
+    def __repr__(self):
+        return "<DoubleListMatrix>"
+
+    def __deepcopy__(self):
+        return self.new(deepcopy(self.left), deepcopy(self.right))
+
+    def __getitem__(self, key):
+        if key not in [0, 1]:
+            raise IndexError
+        return [self.left, self.right][key]
 
 
 class AugmentedMatrix:
