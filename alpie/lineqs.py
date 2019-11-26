@@ -33,7 +33,7 @@ def decompositionCholesky(matrix):
 
     n = len(matrix)
 
-    T = matrices.SquareMatrix(size=n, data=0)
+    T = matrices.SquareMatrix.zeros(size=n)
 
     T[0][0] = matrix[0][0] ** .5
 
@@ -110,7 +110,7 @@ def gaussInversed(matrix):
             gaussElimination(
                 matrices.AugmentedMatrix(
                     coeffs=matrix,
-                    eqs=matrices.Matrix.filledWith(vector).transposed))
+                    eqs=matrices.Matrix(vector).transposed))
             .roots.transposed)
 
     return new
@@ -123,7 +123,7 @@ def simpleIterationCoefficients(matrix):
     checktype(matrix, matrices.AugmentedMatrix)
 
     A = matrices.SquareMatrix.empty()
-    B = matrices.Matrix.empty()
+    B = matrices.PlainMatrix.empty()
 
     for aii, aij, bi in zip(
         matrix.coeffs.diagonal, matrix.coeffs.rows(), matrix.eqs.rows()
@@ -145,7 +145,7 @@ def simpleIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     checktype(matrix, matrices.AugmentedMatrix)
 
     if initial:
-        X = matrices.Matrix(initial)
+        X = matrices.PlainMatrix(initial)
         if X.dimensions != matrix.eqs.dimensions:
             raise matrices.InappropriateDimensions
 
@@ -173,7 +173,7 @@ def seidelIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     checktype(matrix, matrices.AugmentedMatrix)
 
     if initial:
-        X = matrices.Matrix.ensure(initial)
+        X = matrices.PlainMatrix.ensure(initial)
         if X.dimensions != matrix.eqs.dimensions:
             raise matrices.InappropriateDimensions
 
@@ -183,7 +183,7 @@ def seidelIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
         X = deepcopy(coeffsB)
 
     def iterator(C, d, x):
-        newX = matrices.Matrix.empty()
+        newX = matrices.PlainMatrix.empty()
         # Calculate each equation apart
         for row, b in zip(C.rows(), d.elements()):
             newX.data.append([b + sum(

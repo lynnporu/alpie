@@ -13,8 +13,8 @@ class WrongInitial(Exception):
 
 
 def rayleighQuotient(matrix, vector):
-    matrix = matrices.Matrix.ensure(matrix)
-    vector = matrices.Matrix.ensure(vector)
+    matrix = matrices.PlainMatrix.ensure(matrix)
+    vector = matrices.PlainMatrix.ensure(vector)
 
     return ((matrix @ vector) * vector) / vector ** 2
 
@@ -24,7 +24,7 @@ def powerIteration(matrix, initial, num):
     matrix.
     """
     matrix = matrices.SquareMatrix.ensure(matrix)
-    vector = matrices.Matrix.ensure(initial)
+    vector = matrices.PlainMatrix.ensure(initial)
 
     while num > 0:
         vector = (matrix @ vector) / vector.euclideanNorm
@@ -39,7 +39,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
     by default).
     """
     matrix = matrices.SquareMatrix.ensure(matrix)
-    initial = matrices.Matrix.ensure(initial)
+    initial = matrices.PlainMatrix.ensure(initial)
 
     if not solvingfunc:
         def solvingfunc(A, b):
@@ -54,7 +54,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
             (matrix - matrix.identityMask * rayleighQuotient(matrix, prevX)),
             prevX)
         prevX = yk / yk.euclideanNorm
-        num -=1
+        num -= 1
 
     return prevX
 
