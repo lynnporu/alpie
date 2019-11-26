@@ -448,12 +448,12 @@ class Matrix(MultidimensionalMatrix):
                 lambda n: n ** 2,
                 self.elements())) ** .5
 
-    # TODO: test @ operator in algorithms
     def __matmul__(self, other):
         if self.dimensions[1] != other.dimensions[0]:
             raise ValueError("These matrices can not be multiplied.")
 
-        return self.new.filledWith(
+        # Result might have another dimension than multipliers
+        return Matrix.filledWith(
             [
                 [
                     sum(
@@ -506,8 +506,8 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def sizedAs(cls, *size):
-    	if type(size) is list:
-    		size = size[0]
+        if type(size) is list:
+            size = size[0]
         return cls(size=size, data=None)
 
     @classmethod
@@ -734,6 +734,7 @@ class AugmentedMatrixRow:
     def __repr__(self):
         return f"<AugmentedMatrixRow data={str(self)}>"
 
+
 class NotSolvable(Exception):
     pass
 
@@ -773,27 +774,31 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
 
     @property
     def roots(self):
-        """Calculate roots out of upper-right matrix. Look TriangularMatrix
+        """Calculate roots out of upper-right matrix. Check TriangularMatrix
         docstrings for definition.
         """
 
         matrix = self.upperRight
 
-        n = len(matrix)
-        x = []
+        x = list()
 
-        for i in range(n - 1, -1, -1):
+        for row, eq in zip(reversed(self.coeffs), reversed(self.eqs)):
 
-            try:
-                x.insert(0, matrix[i][n] / matrix[i][i])
-            except ZeroDivisionError:
-                raise NotSolvable
+            seq = 0
 
-            for k in range(i - 1, -1, -1):
-                matrix[k][n] -= matrix[k][i] * x[0]
+            # Multiplying found roots vector with row of coefficients and sum
+            # it up.
+            for index, coeff in enumerate(reversed(row)):
+
+                if len(x) > index:
+                    seq += coeff * x[index]
+
+                else:
+                    x.append((eq[0] - seq) / coeff)
+                    break
 
         return Matrix.filledWith(
-            x if matrix.forwardRootsOrder else x[::-1]).transposed
+            x[::-1] if matrix.forwardRootsOrder else x).transposed
 
 
 class TriangularMatrix(SquareMatrix):
