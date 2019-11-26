@@ -13,6 +13,74 @@ class InappropriateDimensions(Exception):
     pass
 
 
+class Matrix:
+    """This class represents a matrix of any type and shape.
+
+    Methods should be implemented for this interface:
+        @classmethod ensure(cls, data, *args, **kwargs)
+            Ensure if given `data` object has the same class as the current. If
+            yes, then return copy of it or try to create
+            cls(data, *args, **kwargs) otherwise.
+        @property new:
+            Returns object of current class.
+        @classmethod empty(cls):
+            Returns empty object of this class.
+        @property elements:
+            Generates elements of the matrix in the recursive order
+        __eq__(self, other)
+        __bool__(self)
+        __str__(self)
+        __repr__(self):
+        __deepcopy__(self, memdict)
+        __getitem__(self, key)
+        __setitem__(self, key, item)
+
+    """
+
+    @classmethod
+    def ensure(cls, data, *args, **kwargs):
+
+        if isinstance(data, cls):
+            return deepcopy(data, *args, **kwargs)
+
+        else:
+            return cls(data)
+
+    @property
+    def new(self):
+        return type(self)
+
+    @classmethod
+    def empty(cls, *args, **kwargs):
+        """Creates empty matrix.
+        """
+        return cls(*args, **kwargs)
+
+    @property
+    def elements(self):
+        raise NotImplemented
+
+    def __eq__(self, other):
+        raise NotImplemented
+
+    def __bool__(self):
+        raise NotImplemented
+
+    def __str__(self):
+        raise NotImplemented
+
+    def __repr__(self):
+        return f"<Matrix>"
+
+    def __deepcopy__(self, memdict):
+        raise NotImplemented
+
+    def __getitem__(self, key):
+        raise NotImplemented
+
+    def __setitem__(self, key, item):
+        raise NotImplemented
+
 class MultidimensionalMatrix:
 
     def __init__(self, dimensions=None, data=None):
