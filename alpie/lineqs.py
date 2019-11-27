@@ -93,7 +93,7 @@ def gaussElimination(matrix, rowSorting=True):
             for j in range(i, n + 1):
                 new[k][j] += c * new[i][j]
 
-    return matrices.EliminatedAugmentedMatrix(
+    return matrices.TriangularAugmentedMatrix(
         matrices.TriangularMatrix(data=new.coeffs.data, sign=sign),
         matrix.eqs)
 

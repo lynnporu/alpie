@@ -41,7 +41,7 @@ class Matrix:
     def ensure(cls, data, *args, **kwargs):
 
         if isinstance(data, cls):
-            return deepcopy(data, *args, **kwargs)
+            return deepcopy(data)
 
         else:
             return cls(data)
@@ -779,7 +779,7 @@ class DoubleListMatrix(Matrix):
     def __repr__(self):
         return "<DoubleListMatrix>"
 
-    def __deepcopy__(self):
+    def __deepcopy__(self, memdict):
         return self.new(deepcopy(self.left), deepcopy(self.right))
 
     def __getitem__(self, key):
@@ -799,7 +799,6 @@ class AugmentedMatrix(DoubleListMatrix):
         inverted into xn..x1 in order to represent real X vector.
         This can happen when columns of coefficients matrix was swapped.
         """
-        coeffs = PlainMatrix.ensure(coeffs)
         eqs = PlainMatrix.ensure(eqs)
 
         if eqs.dimensions != (coeffs.dimensions[0], 1):
@@ -920,16 +919,17 @@ class NotSolvable(Exception):
     pass
 
 
-class EliminatedAugmentedMatrix(AugmentedMatrix):
+class TriangularAugmentedMatrix(AugmentedMatrix):
+    """This class represents matrix which coefficients matrix is triangular.
+    """
 
     def __init__(self, coeffs, eqs, forwardRootsOrder=True):
         coeffs = TriangularMatrix.ensure(coeffs)
-
         return super().__init__(coeffs, eqs, forwardRootsOrder)
 
     def __repr__(self):
         return (
-            f"<EliminatedAugmentedMatrix equations={len(self.left)} "
+            f"<TriangularAugmentedMatrix equations={len(self.left)} "
             f"variables={self.left.dimensions[1]}>")
 
     @property
@@ -981,10 +981,52 @@ class EliminatedAugmentedMatrix(AugmentedMatrix):
             x[::-1] if matrix.forwardRootsOrder else x).transposed
 
 
+class TridiagonalAugmentedMatrix(AugmentedMatrix):
+    """This class represents augmented matrix which coefficients matrix is
+    tridiagonal.
+    """
+
+    # TODO: add roots reordering
+    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
+        coeffs = TridiagonalMatrix.ensure(coeffs)
+        return super().__init__(coeffs, eqs, forwardRootsOrder)
+
+    def __repr__(self):
+        return (
+            f"<TridiagonalAugmentedMatrix size={len(self.left)}>")
+
+    @property
+    def roots(self):
+
+        alpha = [-self.left.b[0] / self.left.a[0]]
+        beta = [self.right[0][0] / self.left.a[0]]
+
+        for c, a, b, d in zip(
+            self.left.c + [0], self.left.a[1:],
+            # Enlarge `b` for one additional iteration. It won't affect roots.
+            self.left.b[1:] + [0], self.right[1:]
+        ):
+            alpha.append(-b / (c * alpha[-1] + a))
+            beta.append((d[0] - c * beta[-1]) / (c * alpha[-2] + a))
+
+        x = [beta[-1]]
+
+        for a, b in zip(reversed(alpha[:-1]), reversed(beta[:-1])):
+            x.append(a * x[-1] + b)
+
+        return PlainMatrix(
+            x[::-1] if self.forwardRootsOrder else x).transposed
+
+
 class SequenceMatrix(Matrix):
     """This interface defines a matrix which elements can be stored in several
     sequences of numbers. For example, you shouldn't save all to zeros for
     diagonal matrix.
+
+    Methods should be implemented:
+        @property listable:
+            Returns ListMatrix of current matrix.
+
     """
 
     def __init__(self, *sequences):
@@ -1003,6 +1045,10 @@ class SequenceMatrix(Matrix):
     @property
     def elements(self):
         return itertools.chain(*self.sequences)
+
+    @property
+    def listable(self):
+        raise NotImplemented
 
     def __eq__(self, other):
         if not isinstance(other, SequenceMatrix):
@@ -1023,8 +1069,8 @@ class SequenceMatrix(Matrix):
     def __repr__(self):
         return f"<SequenceMatrix with {len(self.sequences)} sequences>"
 
-    def __deepcopy__(self):
-        return self.new(deepcopy(self.sequences))
+    def __deepcopy__(self, memdict):
+        return self.new(*deepcopy(self.sequences))
 
     # getters and setters are not implemented at this level
 
@@ -1070,3 +1116,8 @@ class TridiagonalMatrix(SequenceMatrix):
         row += [0] * (len(self) - len(row))
 
         return row
+
+    @property
+    def listable(self):
+        return PlainMatrix([
+            self[row] for row in range(len(self))])
