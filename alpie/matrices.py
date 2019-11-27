@@ -1027,3 +1027,46 @@ class SequenceMatrix(Matrix):
         return self.new(deepcopy(self.sequences))
 
     # getters and setters are not implemented at this level
+
+
+class TridiagonalMatrix(SequenceMatrix):
+
+    # TODO: add inverse columns/rows
+
+    def __init__(self, c, a, b):
+        """Init following matrix:
+        a b 0 0 0
+        c a b 0 0
+        0 c a b 0
+        0 0 c a b
+        0 0 0 c a
+        """
+        self.sequences = [c, a, b]
+        self.a = a
+        self.b = b
+        self.c = c
+
+    @property
+    def dimensions(self):
+        return (len(self.a), len(self.a))
+
+    def __len__(self):
+        return len(self.a)
+
+    def __getitem__(self, key):
+        row = list()
+
+        if key > 1:
+            row += [0] * (key - 1)
+
+        if key != 0:
+            row.append(self.c[key - 1])
+
+        row.append(self.a[key])
+
+        if key != len(self) - 1:
+            row.append(self.b[key])
+
+        row += [0] * (len(self) - len(row))
+
+        return row
