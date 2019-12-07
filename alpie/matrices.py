@@ -255,7 +255,7 @@ class ListMatrix(Matrix):
 
         return matrix.shape(
             fillwith=list(map(
-                function, matrix.elements())),
+                function, matrix.elements)),
             unpack=True)
 
     def inversedAt(self, *dimensions):
@@ -361,7 +361,7 @@ class ListMatrix(Matrix):
             self.dimensions == other.dimensions
         ):
             return sum(map(
-                operator.mul, self.elements(), other.elements()))
+                operator.mul, self.elements, other.elements))
 
         # Multiply by number.
         else:
@@ -379,7 +379,7 @@ class ListMatrix(Matrix):
         return self.sketch.shape(
             fillwith=list(map(
                 operator.add,
-                self.elements(), other.elements())),
+                self.elements, other.elements)),
             unpack=True)
 
     def __sub__(self, other):
@@ -389,7 +389,7 @@ class ListMatrix(Matrix):
         return self.sketch.shape(
             fillwith=list(map(
                 operator.sub,
-                self.elements(), other.elements())),
+                self.elements, other.elements)),
             unpack=True)
 
     def __neg__(self):
@@ -496,7 +496,7 @@ class PlainMatrix(ListMatrix):
         return sum(
             map(
                 lambda n: n ** 2,
-                self.elements())) ** .5
+                self.elements)) ** .5
 
     @property
     def withInversedRows(self):

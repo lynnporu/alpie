@@ -1,4 +1,5 @@
-"""This module include methods for finding eigenvalues and eigenvectors.
+"""Telementshis module include methods for finding eigenvalues and
+eigenvectors.
 """
 
 import matrices
