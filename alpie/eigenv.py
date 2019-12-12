@@ -105,4 +105,3 @@ def jacobi(matrix, accuracy=1e-5):
         functools.reduce(
             operator.matmul, hmatrices).rows()
     )
-
