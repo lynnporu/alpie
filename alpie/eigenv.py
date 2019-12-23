@@ -1,4 +1,4 @@
-"""Telementshis module include methods for finding eigenvalues and
+"""This module include methods for finding eigenvalues and
 eigenvectors.
 """
 
