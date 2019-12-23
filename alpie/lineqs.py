@@ -185,9 +185,9 @@ def seidelIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     def iterator(C, d, x):
         newX = matrices.PlainMatrix.empty()
         # Calculate each equation apart
-        for row, b in zip(C.rows(), d.elements()):
+        for row, b in zip(C.rows(), d.elements):
             newX.data.append([b + sum(
-                [cn * xn for cn, xn in zip(row, x.elements())]
+                [cn * xn for cn, xn in zip(row, x.elements)]
                 # No x was calculated yet
                 if not newX else
                 [cn * newX[-1][0] for cn in row]

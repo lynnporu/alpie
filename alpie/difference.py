@@ -14,4 +14,4 @@ def simpleMax(eps, a, b):
     a = matrices.PlainMatrix.ensure(a)
     b = matrices.PlainMatrix.ensure(b)
     return max(map(
-        operator.sub, a.elements(), b.elements())) <= eps
+        operator.sub, a.elements, b.elements)) <= eps
