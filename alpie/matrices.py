@@ -40,6 +40,9 @@ class Matrix:
     @classmethod
     def ensure(cls, data, *args, **kwargs):
 
+        if hasattr(data, "data"):
+            return cls(data.data)
+
         if isinstance(data, cls):
             return deepcopy(data, *args, **kwargs)
 
@@ -99,14 +102,6 @@ class ListMatrix(Matrix):
         """Create a matrix with given data.
         """
         self.data = deepcopy(data)
-
-    @classmethod
-    def ensure(cls, data):
-
-        if isinstance(data, cls):
-            return data
-        else:
-            return cls(data)
 
     @classmethod
     def sizedAs(cls, dimensions: tuple):
