@@ -15,7 +15,8 @@ def checktype(obj, needed):
     data (by `ensure` function).
     """
     if not isinstance(obj, needed):
-        raise ValueError(f"{obj.__class__.__name__} needed for this function.")
+        raise ValueError(
+            f"{needed.__class__.__name__} needed for this function.")
 
 
 class NotSymmetric(Exception):
