@@ -11,7 +11,7 @@ def simpleMax(eps, a, b):
     max(a[i] - b[i]), where a[i] is i-th coordinate of matrix,
     and check if it is <= than given eps.
     """
-    a = matrices.Matrix.ensure(a)
-    b = matrices.Matrix.ensure(b)
+    a = matrices.PlainMatrix.ensure(a)
+    b = matrices.PlainMatrix.ensure(b)
     return max(map(
-        operator.sub, a.elements(), b.elements())) <= eps
+        operator.sub, a.elements, b.elements)) <= eps

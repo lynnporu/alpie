@@ -1,4 +1,5 @@
-"""This module include methods for finding eigenvalues and eigenvectors.
+"""This module include methods for finding eigenvalues and
+eigenvectors.
 """
 
 import matrices
@@ -13,24 +14,37 @@ class WrongInitial(Exception):
 
 
 def rayleighQuotient(matrix, vector):
-    matrix = matrices.Matrix.ensure(matrix)
-    vector = matrices.Matrix.ensure(vector)
+    matrix = matrices.PlainMatrix.ensure(matrix)
+    vector = matrices.PlainMatrix.ensure(vector)
 
     return ((matrix @ vector) * vector) / vector ** 2
 
 
-def powerIteration(matrix, initial, num):
+def powerIteration(matrix, initial, accuracy):
     """Perform power iteration method in order to find eigenvalue of given
     matrix.
+    Returns tuple of eigenvalue and eigenvector.
     """
     matrix = matrices.SquareMatrix.ensure(matrix)
-    vector = matrices.Matrix.ensure(initial)
+    vector = matrices.PlainMatrix.ensure(initial)
 
-    while num > 0:
-        vector = (matrix @ vector) / vector.euclideanNorm
-        num -= 1
+    x = vector / vector.euclideanNorm
+    y = (matrix @ x)
+    value = None
 
-    return vector
+    while True:
+
+        ynew = (matrix @ x)
+        xnew = y / y.euclideanNorm
+
+        valuenew = (ynew / x).avg
+
+        if value is not None and abs(value - valuenew) < accuracy:
+            break
+
+        x, y, value = xnew, ynew, valuenew
+
+    return (valuenew, x)
 
 
 def RQIteration(matrix, initial, num, solvingfunc=None):
@@ -39,7 +53,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
     by default).
     """
     matrix = matrices.SquareMatrix.ensure(matrix)
-    initial = matrices.Matrix.ensure(initial)
+    initial = matrices.PlainMatrix.ensure(initial)
 
     if not solvingfunc:
         def solvingfunc(A, b):
@@ -54,7 +68,7 @@ def RQIteration(matrix, initial, num, solvingfunc=None):
             (matrix - matrix.identityMask * rayleighQuotient(matrix, prevX)),
             prevX)
         prevX = yk / yk.euclideanNorm
-        num -=1
+        num -= 1
 
     return prevX
 
@@ -102,6 +116,5 @@ def jacobi(matrix, accuracy=1e-5):
         matrix.diagonal,
         # Multiply all H-matrices and get its rows.
         functools.reduce(
-            operator.matmul, hmatrices).rows()
+            operator.matmul, hmatrices).rows
     )
-

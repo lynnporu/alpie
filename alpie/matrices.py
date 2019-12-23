@@ -13,38 +13,108 @@ class InappropriateDimensions(Exception):
     pass
 
 
-class MultidimensionalMatrix:
+class Matrix:
+    """This class represents a matrix of any type and shape.
 
-    def __init__(self, dimensions=None, data=None):
-        """Create matrix with given dimensions and fill it with None OR create
-        matrix and assign it with data.
-        """
-        if not dimensions and isinstance(data, list):
-            self.data = deepcopy(data)
+    Methods should be implemented for this interface:
+        @classmethod ensure(cls, data, *args, **kwargs)
+            Ensure if given `data` object has the same class as the current. If
+            yes, then return copy of it or try to create
+            cls(data, *args, **kwargs) otherwise.
+        @property new:
+            Returns object of current class.
+        @classmethod empty(cls):
+            Returns empty object of this class.
+        elements:
+            Generates elements of the matrix in the recursive order
+        __eq__(self, other)
+        __bool__(self)
+        __str__(self)
+        __repr__(self):
+        __deepcopy__(self, memdict)
+        __getitem__(self, key)
+        __setitem__(self, key, item)
 
-        elif not dimensions and not data:
-            raise ValueError("Check docstring for help.")
-
-        else:
-            self.shape(data, dimensions)
+    """
 
     @classmethod
-    def sizedAs(cls, dimensions):
-        return cls(dimensions, None)
+    def ensure(cls, data, *args, **kwargs):
 
-    @classmethod
-    def filledWith(cls, data):
-        return cls(None, data)
+        if hasattr(data, "data"):
+            return cls(data.data)
 
-    @classmethod
-    def ensure(cls, data):
-        """Ensure if given object has the same type as current class.
-        """
         if isinstance(data, cls):
-            return deepcopy(data)
+            return deepcopy(data, *args, **kwargs)
 
         else:
-            return cls.filledWith(data)
+            return cls(data)
+
+    @property
+    def new(self):
+        return type(self)
+
+    @classmethod
+    def empty(cls, *args, **kwargs):
+        """Creates empty matrix.
+        """
+        return cls(*args, **kwargs)
+
+    def elements(self):
+        raise NotImplemented
+
+    def __eq__(self, other):
+        raise NotImplemented
+
+    def __bool__(self):
+        raise NotImplemented
+
+    def __str__(self):
+        raise NotImplemented
+
+    def __repr__(self):
+        return f"<Matrix>"
+
+    def __deepcopy__(self, memdict):
+        raise NotImplemented
+
+    def __getitem__(self, key):
+        raise NotImplemented
+
+    def __setitem__(self, key, item):
+        raise NotImplemented
+
+
+class ListMatrix(Matrix):
+    """This interface defines a matrix which elements should be stored in a
+    single list object which is usually not one-dimensional. For example, all
+    the elements of the diagonal or tridiagonal matrix you can store with a
+    bunch (or just a single) sequence of numbers.
+
+    Properties:
+        list data:
+            Usually the place where elements stored in.
+        tuple dimensions:
+            Tuple of dimensions of this matrix.
+        float avg:
+            Returns mean.
+
+    """
+
+    def __init__(self, data: list):
+        """Create a matrix with given data.
+        """
+        self.data = deepcopy(data)
+
+    @classmethod
+    def sizedAs(cls, dimensions: tuple):
+        """Creates matrix filled with None objects with given dimension.
+        """
+        return cls.empty().shape(fillwith=None, dimensions=dimensions)
+
+    def clear(self):
+        """Clear self.data.
+        """
+        self.data = list()
 
     def shape(
         self, fillwith=None, dimensions=None, unpack=False,
@@ -59,7 +129,7 @@ class MultidimensionalMatrix:
         if not dimensions:
             dimensions = self.dimensions
 
-        self.data = list()
+        self.clear()
 
         def fill(array, size, *coords):
 
@@ -86,40 +156,13 @@ class MultidimensionalMatrix:
 
         return self
 
-    @property
-    def coordinates(self):
-        """Return iterator of all coordinates in matrix.
-        """
-        return itertools.product(
-            *map(range, self.dimensions))
-
-    @property
-    def enum(self):
-        """Return iterator of all elements with its coordinates in matrix.
-        """
-        return [
-            (self.at(*position), position)
-            for position
-            in self.coordinates]
-
-    @property
-    def sketch(self):
-        """Returns empty matrix with same dimensions.
-        """
-        return self.new.sizedAs(self.dimensions)
-
-    @property
-    def new(self):
-        """Return current class.
-        """
-
-        return type(self)
+    @classmethod
+    def zeros(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(0)
 
     @classmethod
-    def empty(cls):
-        """Creates empty matrix.
-        """
-        return cls.filledWith([])
+    def ones(cls, dimensions):
+        return cls.sizedAs(dimensions).shape(1)
 
     @property
     def dimensions(self):
@@ -145,7 +188,76 @@ class MultidimensionalMatrix:
 
         measure(self.data)
 
-        return coords
+        return tuple(coords)
+
+    @classmethod
+    def empty(cls):
+        return cls(list())
+
+    @property
+    def sketch(self):
+        """Returns empty matrix with same dimensions.
+        """
+        return self.new.sizedAs(self.dimensions)
+
+    @property
+    def elements(self):
+        """Generates elements of matrix in the recursive order.
+        """
+        def flat(array):
+            for el in array:
+                if isinstance(el, list):
+                    for subel in flat(el):
+                        yield subel
+                else:
+                    yield el
+
+        return flat(self.data)
+
+    @property
+    def avg(self):
+        return sum(self.elements) / len(list(self.elements))
+
+    @property
+    def coordinates(self):
+        """Return iterator of all coordinates in matrix.
+        """
+        return itertools.product(
+            *map(range, self.dimensions))
+
+    def at(self, *coordinates):
+        """Return element at given coordinates. Useful for indexing with tuples:
+        A[0][1][2] -> A.at(0, 1, 2)
+        """
+
+        def dig(array, index, *tail):
+            if not tail:
+                return array[index]
+            else:
+                return dig(array[index], *tail)
+
+        return dig(self.data, *coordinates)
+
+    @property
+    def enum(self):
+        """Return iterator of all elements with its coordinates in matrix.
+        """
+        return [
+            (self.at(*position), position)
+            for position
+            in self.coordinates]
+
+    def mapWith(self, function, new=True):
+        """Map elements of matrix with a given function and returns the result.
+        If new=True, original elements won't be changed.
+        """
+
+        matrix = self if not new else deepcopy(self)
+
+        return matrix.shape(
+            fillwith=list(map(
+                function, matrix.elements)),
+            unpack=True)
 
     def inversedAt(self, *dimensions):
         """Inverse matrix at each given dimension depth.
@@ -182,7 +294,7 @@ class MultidimensionalMatrix:
         except TypeError:
             raise InappropriateDimensions
 
-        return self.new.filledWith(new)
+        return self.new(new)
 
     def inverseAt(self, *dimensions):
         """Alias for `inversedAt` method.
@@ -219,43 +331,29 @@ class MultidimensionalMatrix:
 
         insert(self.data, *coordinates)
 
-    def at(self, *coordinates):
-        """Return element at given coordinates. Useful for indexing with tuples:
-        A[0][1][2] -> A.at((0, 1, 2))
-        """
+    def __eq__(self, other):
+        if not isinstance(other, ListMatrix):
+            raise TypeError("Can't compare ListMatrix with something else.")
 
-        def dig(array, index, *tail):
-            if not tail:
-                return array[index]
-            else:
-                return dig(array[index], *tail)
+        return self.data == other.data
 
-        return dig(self.data, *coordinates)
-    
-    def elements(self):
-        """Generates elements of matrix in the recursive order.
-        """
-        def flat(array):
-            for el in array:
-                if isinstance(el, list):
-                    for subel in flat(el):
-                        yield subel
-                else:
-                    yield el
+    def __bool__(self):
+        return bool(self.data)
 
-        return flat(self.data)
+    def __str__(self):
+        return "\n".join([str(row) for row in self.data])
 
-    def mapWith(self, function, new=True):
-        """Map elements of matrix with a given function and returns the result.
-        If new=True, original elements won't be changed.
-        """
+    def __repr__(self):
+        return f"<ListMatrix dimensions={self.dimensions}>"
 
-        matrix = self if not new else deepcopy(self)
+    def __deepcopy__(self, memdict):
+        return self.new(deepcopy(self.data))
 
-        return matrix.shape(
-            fillwith=list(map(
-                function, matrix.elements())),
-            unpack=True)
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
 
     def __mul__(self, other):
         # Scalar multiplication of two matrices.
@@ -264,7 +362,7 @@ class MultidimensionalMatrix:
             self.dimensions == other.dimensions
         ):
             return sum(map(
-                operator.mul, self.elements(), other.elements()))
+                operator.mul, self.elements, other.elements))
 
         # Multiply by number.
         else:
@@ -272,12 +370,19 @@ class MultidimensionalMatrix:
                 lambda el: el * other)
 
     def __truediv__(self, other):
+
+        if isinstance(self, type(other)):
+
+            if self.dimensions != other.dimensions:
+                raise TypeError("Two matrices has no the same dimensions.")
+
+            return self.sketch.shape(
+                fillwith=list(map(
+                    operator.truediv, self.elements, other.elements)),
+                unpack=True)
+
         return self.mapWith(
             lambda el: el / other)
-
-    def __truediv__(self, num):
-        return self.mapWith(
-            lambda el: el / num)
 
     def __add__(self, other):
         if self.dimensions != other.dimensions:
@@ -286,7 +391,7 @@ class MultidimensionalMatrix:
         return self.sketch.shape(
             fillwith=list(map(
                 operator.add,
-                self.elements(), other.elements())),
+                self.elements, other.elements)),
             unpack=True)
 
     def __sub__(self, other):
@@ -296,14 +401,8 @@ class MultidimensionalMatrix:
         return self.sketch.shape(
             fillwith=list(map(
                 operator.sub,
-                self.elements(), other.elements())),
+                self.elements, other.elements)),
             unpack=True)
-
-    def __eq__(self, other):
-        return self.data == other.data
-
-    def __bool__(self):
-        return len(self) > 0
 
     def __neg__(self):
         return self * -1
@@ -336,88 +435,53 @@ class MultidimensionalMatrix:
     def __hex__(self):
         return self.mapWith(hex)
 
-    def __str__(self):
-        out = str()
-        for row in self.data:
-            out += str(row) + "\n"
-        return out
-
-    def __repr__(self):
-        return f"<MultidimensionalMatrix dimensions={self.dimensions}>"
-
     def __len__(self):
         """Returns first dimension.
         """
         return len(self.data)
 
-    def __deepcopy__(self, memdict):
-        return self.new.filledWith(deepcopy(self.data))
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, item):
-        self.data[key] = item
-
-    def __hash__(self):
-        return int(
-            "".join(
-                map(
-                    lambda n: f'{n:03}',
-                    itertools.chain(self.dimensions, self.elements()))))
-
     def convertTo(self, cls):
         """Create new exemplar of given class with data of current one.
         """
-        return cls.filledWith(self.data)
+        return cls(self.data)
 
 
-class Matrix(MultidimensionalMatrix):
-
-    def __init__(self, height=None, width=None, data=None):
-        """Create [height x width] matrix.
-        """
-        if isinstance(data, list):
-            self.data = data
-        else:
-            return super().__init__([height, width], data)
+class PlainMatrix(ListMatrix):
+    """This class represents a simple two dimensional matrix.
+    """
 
     def __repr__(self):
-        return f"<Matrix dimensions={self.dimensions}>"
+        return f"<PlainMatrix dimensions={self.dimensions}>"
 
     @classmethod
-    def sizedAs(cls, dimensions: tuple):
+    def sizedAs(cls, dimensions):
         """`dimensions` is (height, width)
         """
-        height, width = dimensions
-        return cls(height=height, width=width, data=None)
+        if len(dimensions) != 2:
+            raise TypeError(
+                "You're trying to create not two dimensional matrix")
+        return super().sizedAs(dimensions)
 
-    @classmethod
-    def filledWith(cls, data):
-        return cls(height=None, width=None, data=data)
-
-    @classmethod
-    def zeros(cls, height, width):
-        return cls(height, width, data=0)
-
+    @property
     def rows(self):
         """Generate rows.
         """
         for row in self.data:
             yield row
 
+    @property
     def columns(self):
         """Generate columns.
         """
         for n in range(self.dimensions[1]):
             yield [row[n] for row in self.data]
 
-    def getRow(self, n):
+    def row(self, n):
         """Returns n-th row.
         """
         return self.data[n]
 
-    def getColumn(self, n):
+    def column(self, n):
         """Returns n-th column.
         """
         return [row[n] for row in self.data]
@@ -425,12 +489,12 @@ class Matrix(MultidimensionalMatrix):
     @property
     def transposed(self):
         if len(self.dimensions) == 1:
-            return self.new.filledWith(
+            return self.new(
                 [[el] for el in self.data]
             )
 
         else:
-            return self.new.filledWith(
+            return self.new(
                 [list(row)
                     for row in
                     zip(*self.data)])
@@ -446,14 +510,28 @@ class Matrix(MultidimensionalMatrix):
         return sum(
             map(
                 lambda n: n ** 2,
-                self.elements())) ** .5
+                self.elements)) ** .5
 
-    # TODO: test @ operator in algorithms
+    @property
+    def withInversedRows(self):
+        return self.inversedAt(0)
+
+    def inverseRows(self):
+        self.inverseAt(0)
+
+    @property
+    def withInversedColummns(self):
+        return self.inverseAt(1)
+
+    def inverseColumns(self):
+        self.inverseAt(1)
+
     def __matmul__(self, other):
         if self.dimensions[1] != other.dimensions[0]:
             raise ValueError("These matrices can not be multiplied.")
 
-        return self.new.filledWith(
+        # Result might have another dimension than multipliers
+        return PlainMatrix(
             [
                 [
                     sum(
@@ -484,31 +562,33 @@ class Matrix(MultidimensionalMatrix):
         return new
 
 
-class SquareMatrix(Matrix):
-
-    def __init__(self, size=None, data=None):
-        """Create [size x size] matrix.
-        """
-        if isinstance(size, list):
-            size = size[0]
-        if isinstance(data, list) and not size:
-            self.data = data
-            return
-        else:
-            return super().__init__(size, size, data)
+class SquareMatrix(PlainMatrix):
 
     def __repr__(self):
         return f"<SquareMatrix size={len(self)}>"
 
     @classmethod
-    def filledWith(cls, data):
-        return cls(size=None, data=data)
+    def sizedAs(cls, dimensions):
 
-    @classmethod
-    def sizedAs(cls, *size):
-    	if type(size) is list:
-    		size = size[0]
-        return cls(size=size, data=None)
+        if type(dimensions) is int:
+            dimensions = (dimensions, dimensions)
+
+        elif type(dimensions) is tuple:
+            if len(dimensions) > 2:
+                raise TypeError(
+                    "You're trying to create square matrix with dimension "
+                    "more than two")
+            elif len(dimensions) == 2 and dimensions[0] != dimensions[1]:
+                raise TypeError(
+                    "You're passing dimensions of rectangle matrix into "
+                    "constructor of square matrix.")
+            else:
+                dimensions = (dimensions[0], dimensions[0])
+
+        else:
+            raise TypeError
+
+        return super().sizedAs(dimensions)
 
     @classmethod
     def givens(cls, size, i, j, theta):
@@ -527,16 +607,18 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def zeros(cls, size):
-        return cls(size=size, data=0)
+        return super().zeros((size, size))
+
+    @classmethod
+    def ones(cls, size):
+        return super().ones((size, size))
 
     @property
     def diagonal(self):
         """Generate diagonal of the matrix.
         """
         return (
-            row[i]
-            for i, row
-            in enumerate(self.data))
+            row[i] for i, row in enumerate(self.data))
 
     @property
     def antidiagonal(self):
@@ -562,7 +644,7 @@ class SquareMatrix(Matrix):
 
     @classmethod
     def ofIdentity(cls, size):
-        return cls.filledWith([
+        return cls([
             [
                 1 if ncell == nrow else 0
                 for ncell
@@ -584,20 +666,6 @@ class SquareMatrix(Matrix):
         square = list(map(tuple, self.data))
         return square == list(zip(*square))
 
-    @property
-    def withInversedRows(self):
-        return self.inversedAt(0)
-
-    def inverseRows(self):
-        self.inverseAt(0)
-
-    @property
-    def withInversedColummns(self):
-        return self.inverseAt(1)
-
-    def inverseColumns(self):
-        self.inverseAt(1)
-
     def zeroDiagonal(self):
         """Make diagonal of this matrix equal to zero.
         """
@@ -605,207 +673,14 @@ class SquareMatrix(Matrix):
             self[i][i] = 0
 
 
-class AugmentedMatrix:
-
-    # TODO: add `ensure` method.
-    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
-        """Check A and B matrices and create augmented matrix.
-
-        `forwardRootsOrder` == False means that calculated x1..xn should be
-        inverted into xn..x1 in order to represent real X vector.
-        This can happen when columns of coefficients matrix was swapped.
-        """
-        coeffs = Matrix.ensure(coeffs)
-        eqs = Matrix.ensure(eqs)
-
-        if eqs.dimensions != [coeffs.dimensions[0], 1]:
-            raise ValueError("Incorrect system.")
-
-        self.coeffs = coeffs
-        self.eqs = eqs
-        self.forwardRootsOrder = forwardRootsOrder
-
-    @property
-    def new(self):
-        return type(self)
-
-    def inverseColumns(self):
-        """Inverse columns of coefficients matrix.
-        """
-        self.coeffs.inverseColumns()
-        self.forwardRootsOrder = not self.forwardRootsOrder
-
-    def inverseRows(self):
-        """Inverse columns of coefficients and `eqs` matrix.
-        """
-        self.coeffs.inverseRows()
-        self.eqs.inverseAt(0)
-
-    @classmethod
-    def withZeroEqs(cls, coeffs):
-        return cls(
-            coeffs,
-            eqs=Matrix(
-                data=[[1]] * coeffs.dimensions[0]))
-
-    def __repr__(self):
-        return (
-            f"<AugmentedMatrix equations={len(self.coeffs)} "
-            f"variables={self.coeffs.dimensions[1]}>"
-        )
-
-    def __getitem__(self, key):
-        return AugmentedMatrixRow(self.coeffs[key], self.eqs[key])
-
-    def __setitem__(self, key, item):
-        if not isinstance(item, AugmentedMatrixRow):
-            raise ValueError("Must be AugmentedMatrixRow.")
-        self.coeffs[key], self.eqs[key] = item.coeffs, item.eq
-
-    def __len__(self):
-        return self.coeffs.dimensions[0]
-
-    def __str__(self):
-        out = str()
-        for coeffs, equation in zip(self.coeffs, self.eqs):
-            out += "\t".join(map(str, coeffs)) + \
-                "\t|\t" + str(equation[0]) + "\n"
-        return out
-
-    def __deepcopy__(self, memdict):
-        return self.new(
-            **deepcopy(self.__dict__))
-
-    def calculate(self, x):
-        """Calculate result of equations with given X vector.
-        """
-
-        return self.coeffs @ x
-
-    def fixedPointIteration(self, initial, iterator, accuracyfunc):
-        """Solve system of linear equations by fixed-point iteration method in
-        form of: x(k+1) = x(k) * C + d
-
-        accuracyfunc will be called with (x0, x1) parameters, where each of
-        them define X vector at correspond step.
-
-        iterator will be called with X-vector at previous step. It should
-        return new X.
-        """
-        X = deepcopy(initial)
-
-        while True:
-            newX = iterator(X)
-            if accuracyfunc(X, newX):
-                X = newX
-                break
-            else:
-                X = newX
-
-        return X
-
-
-class AugmentedMatrixRow:
-
-    def __init__(self, coeffs, eq):
-
-        self.coeffs = coeffs
-        self.eq = eq
-
-    def __getitem__(self, key):
-
-        if key <= len(self.coeffs) - 1:
-            return self.coeffs[key]
-
-        else:
-            return self.eq[0]
-
-    def __setitem__(self, key, item):
-
-        if key <= len(self.coeffs) - 1:
-            self.coeffs[key] = item
-
-        else:
-            self.eq[0] = item
-
-    def __str__(self):
-        return str(self.coeffs + self.eq)
-
-    def __repr__(self):
-        return f"<AugmentedMatrixRow data={str(self)}>"
-
-class NotSolvable(Exception):
-    pass
-
-
-# TODO: Test this class.
-class EliminatedAugmentedMatrix(AugmentedMatrix):
-
-    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
-        coeffs = TriangularMatrix.ensure(coeffs)
-
-        return super().__init__(coeffs, eqs, forwardRootsOrder)
-
-    def __repr__(self):
-        return (
-            f"<EliminatedAugmentedMatrix equations={len(self.coeffs)} "
-            f"variables={self.coeffs.dimensions[1]}>")
-
-    @property
-    def upperRight(self):
-        """Return copy of this matrix with upper-right coefficients. This can
-        be used in order to calculate roots.
-        """
-        new = deepcopy(self)
-
-        if new.coeffs.isUpperRight:
-            return new
-
-        if new.coeffs.isUpperLeft:
-            new.inverseColumns()
-        elif new.coeffs.isLowerLeft:
-            new.inverseColumns()
-            new.inverseRows()
-        elif new.coeffs.isLowerRight:
-            new.inverseRows()
-
-        return new
-
-    @property
-    def roots(self):
-        """Calculate roots out of upper-right matrix. Look TriangularMatrix
-        docstrings for definition.
-        """
-
-        matrix = self.upperRight
-
-        n = len(matrix)
-        x = []
-
-        for i in range(n - 1, -1, -1):
-
-            try:
-                x.insert(0, matrix[i][n] / matrix[i][i])
-            except ZeroDivisionError:
-                raise NotSolvable
-
-            for k in range(i - 1, -1, -1):
-                matrix[k][n] -= matrix[k][i] * x[0]
-
-        return Matrix.filledWith(
-            x if matrix.forwardRootsOrder else x[::-1]).transposed
-
-
 class TriangularMatrix(SquareMatrix):
 
-    def __init__(self, data, size=None, sign=1):
-        if size:
-            raise TypeError("Size doesn't matter.")
-
+    def __init__(self, data, sign=1):
+        super().__init__(data)
         self.sign = sign
-        self.data = data
 
         if self.lookCorners == [True] * 4:
+            # Not very precious, but ok.
             raise ValueError("Given data is not triangular.")
 
     def __repr__(self):
@@ -850,8 +725,271 @@ class TriangularMatrix(SquareMatrix):
     def det(self):
         return self.sign * self.diagmul
 
-    def __deepcopy__(self, memdict):
-        return self.new(**deepcopy(self.__dict__))
-
     def __setitem__(self, *args):
-        raise TypeError("Assigning is not allowed.")
+        raise NotImplemented
+
+
+class DoubleListMatrix(Matrix):
+    """This interface defines a matrix which elements should be stored in two
+    lists. For example, augmented matrix or some sort of matrices which should
+    be processed simultaneously.
+
+    Childs of this class should also implements these methods:
+        @property listable:
+            Returns current matrix as ListMatrix.
+
+    Properties:
+        list left
+        list right
+
+    """
+
+    def __init__(self, left: list, right: list):
+        """Create a matrix with given data.
+        """
+        self.left = deepcopy(left)
+        self.right = deepcopy(right)
+
+    @property
+    def listable(self):
+        raise NotImplemented
+
+    @classmethod
+    def ensure(cls, data):
+
+        if isinstance(data, cls):
+            return data
+
+        else:
+            raise TypeError(
+                f"{cls.__name__} expected.")
+
+    def clear(self):
+        """Clear data.
+        """
+        self.left = list()
+        self.right = list()
+
+    @classmethod
+    def empty(cls):
+        return cls(list(), list())
+
+    def __eq__(self, other):
+        if not isinstance(other, DoubleListMatrix):
+            raise TypeError(
+                "Can't compare DoubleListMatrix with some other sort "
+                "of matrices.")
+        return self.left == other.left and self.right == other.right
+
+    def __bool__(self):
+        return bool(self.left) or bool(self.right)
+
+    def __str__(self):
+        return [
+            f"{str(left)}\t{str(right)}"
+            for left, right
+            in zip(self.left, self.right)]
+
+    def __repr__(self):
+        return "<DoubleListMatrix>"
+
+    def __deepcopy__(self):
+        return self.new(deepcopy(self.left), deepcopy(self.right))
+
+    def __getitem__(self, key):
+        if key not in [0, 1]:
+            raise IndexError
+        return [self.left, self.right][key]
+
+
+class AugmentedMatrix(DoubleListMatrix):
+
+    def __init__(
+        self, coeffs: PlainMatrix, eqs: PlainMatrix, forwardRootsOrder=True
+    ):
+        """Check A and B matrices and create augmented matrix.
+
+        `forwardRootsOrder` == False means that calculated x1..xn should be
+        inverted into xn..x1 in order to represent real X vector.
+        This can happen when columns of coefficients matrix was swapped.
+        """
+        coeffs = PlainMatrix.ensure(coeffs)
+        eqs = PlainMatrix.ensure(eqs)
+
+        if eqs.dimensions != (coeffs.dimensions[0], 1):
+            raise ValueError("Incorrect system.")
+
+        self.left = coeffs
+        self.right = eqs
+        self.forwardRootsOrder = forwardRootsOrder
+
+    def listable(self):
+        return PlainMatrix(
+            [a + b for a, b in zip(self.left, self.right)])
+
+    def inverseColumns(self):
+        """Inverse columns of coefficients matrix.
+        """
+        self.left.inverseColumns()
+        self.forwardRootsOrder = not self.forwardRootsOrder
+
+    def inverseRows(self):
+        """Inverse columns of coefficients and `eqs` matrix.
+        """
+        self.left.inverseRows()
+        self.right.inverseAt(0)
+
+    @classmethod
+    def withZeroEqs(cls, coeffs):
+        return cls(
+            coeffs,
+            eqs=PlainMatrix([[1]] * coeffs.dimensions[0]))
+
+    def __repr__(self):
+        return (
+            f"<AugmentedMatrix equations={len(self.left)} "
+            f"variables={self.left.dimensions[1]}>"
+        )
+
+    def __getitem__(self, key):
+        return AugmentedMatrixRow(self.left[key], self.right[key])
+
+    def __setitem__(self, key, item):
+        if not isinstance(item, AugmentedMatrixRow):
+            raise ValueError("Must be AugmentedMatrixRow.")
+        self.left[key], self.right[key] = item.left, item.right
+
+    def __len__(self):
+        return len(self.left)
+
+    def __str__(self):
+        out = str()
+        for coeffs, equation in zip(self.left, self.right):
+            out += "\t".join(map(str, coeffs)) + \
+                "\t|\t" + str(equation[0]) + "\n"
+        return out
+
+    def __deepcopy__(self, memdict):
+        return self.new(
+            deepcopy(self.left), deepcopy(self.right))
+
+    def calculate(self, x: PlainMatrix):
+        """Calculate result of equations with given X vector.
+        """
+        return self.left @ PlainMatrix.ensure(x)
+
+    def fixedPointIteration(self, initial, iterator, accuracyfunc):
+        """Solve system of linear equations by fixed-point iteration method in
+        form of: x(k+1) = x(k) * C + d
+
+        accuracyfunc will be called with (x0, x1) parameters, where each of
+        them define X vector at correspond step.
+
+        iterator will be called with X-vector at previous step. It should
+        return new X.
+        """
+        X = deepcopy(initial)
+
+        while True:
+            newX = iterator(X)
+            if accuracyfunc(X, newX):
+                X = newX
+                break
+            else:
+                X = newX
+
+        return X
+
+
+class AugmentedMatrixRow(DoubleListMatrix):
+    """This class represents a row of augmented matrix.
+    """
+
+    def __getitem__(self, key):
+
+        if key <= len(self.left) - 1:
+            return self.left[key]
+
+        else:
+            return self.right[0]
+
+    def __setitem__(self, key, item):
+
+        if key <= len(self.left) - 1:
+            self.left[key] = item
+
+        else:
+            self.right[0] = item
+
+    def __str__(self):
+        return f"{self.left} | {self.right}"
+
+    def __repr__(self):
+        return f"<AugmentedMatrixRow data={str(self)}>"
+
+
+class NotSolvable(Exception):
+    """Raises when roots cannot be found using current method.
+    """
+    pass
+
+
+class EliminatedAugmentedMatrix(AugmentedMatrix):
+
+    def __init__(self, coeffs, eqs, forwardRootsOrder=True):
+        coeffs = TriangularMatrix.ensure(coeffs)
+
+        return super().__init__(coeffs, eqs, forwardRootsOrder)
+
+    def __repr__(self):
+        return (
+            f"<EliminatedAugmentedMatrix equations={len(self.left)} "
+            f"variables={self.left.dimensions[1]}>")
+
+    @property
+    def upperRight(self):
+        """Return copy of this matrix with upper-right coefficients. This can
+        be used in order to calculate roots.
+        """
+        new = deepcopy(self)
+
+        if new.left.isUpperRight:
+            return new
+
+        if new.left.isUpperLeft:
+            new.inverseColumns()
+        elif new.left.isLowerLeft:
+            new.inverseColumns()
+            new.inverseRows()
+        elif new.left.isLowerRight:
+            new.inverseRows()
+
+        return new
+
+    @property
+    def roots(self):
+        """Calculate roots out of upper-right matrix. Check TriangularMatrix
+        docstrings for definition.
+        """
+
+        matrix = self.upperRight
+
+        x = list()
+
+        for row, eq in zip(reversed(self.left), reversed(self.right)):
+
+            seq = 0
+
+            # Multiplying found roots vector with row of coefficients and sum
+            # it up.
+            for index, coeff in enumerate(reversed(row)):
+
+                if len(x) > index:
+                    seq += coeff * x[index]
+
+                else:
+                    x.append((eq[0] - seq) / coeff)
+                    break
+
+        return PlainMatrix(
+            x[::-1] if matrix.forwardRootsOrder else x).transposed
