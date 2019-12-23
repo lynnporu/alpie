@@ -95,6 +95,8 @@ class ListMatrix(Matrix):
             Usually the place where elements stored in.
         tuple dimensions:
             Tuple of dimensions of this matrix.
+        float avg:
+            Returns mean.
 
     """
 
@@ -211,6 +213,10 @@ class ListMatrix(Matrix):
                     yield el
 
         return flat(self.data)
+
+    @property
+    def avg(self):
+        return sum(self.elements) / len(list(self.elements))
 
     @property
     def coordinates(self):
@@ -364,6 +370,17 @@ class ListMatrix(Matrix):
                 lambda el: el * other)
 
     def __truediv__(self, other):
+
+        if isinstance(self, type(other)):
+
+            if self.dimensions != other.dimensions:
+                raise TypeError("Two matrices has no the same dimensions.")
+
+            return self.sketch.shape(
+                fillwith=list(map(
+                    operator.truediv, self.elements, other.elements)),
+                unpack=True)
+
         return self.mapWith(
             lambda el: el / other)
 

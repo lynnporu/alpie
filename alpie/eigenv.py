@@ -20,18 +20,31 @@ def rayleighQuotient(matrix, vector):
     return ((matrix @ vector) * vector) / vector ** 2
 
 
-def powerIteration(matrix, initial, num):
+def powerIteration(matrix, initial, accuracy):
     """Perform power iteration method in order to find eigenvalue of given
     matrix.
+    Returns tuple of eigenvalue and eigenvector.
     """
     matrix = matrices.SquareMatrix.ensure(matrix)
     vector = matrices.PlainMatrix.ensure(initial)
 
-    while num > 0:
-        vector = (matrix @ vector) / vector.euclideanNorm
-        num -= 1
+    x = vector / vector.euclideanNorm
+    y = (matrix @ x)
+    value = None
 
-    return vector
+    while True:
+
+        ynew = (matrix @ x)
+        xnew = y / y.euclideanNorm
+
+        valuenew = (ynew / x).avg
+
+        if value is not None and abs(value - valuenew) < accuracy:
+            break
+
+        x, y, value = xnew, ynew, valuenew
+
+    return (valuenew, x)
 
 
 def RQIteration(matrix, initial, num, solvingfunc=None):
