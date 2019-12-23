@@ -116,5 +116,5 @@ def jacobi(matrix, accuracy=1e-5):
         matrix.diagonal,
         # Multiply all H-matrices and get its rows.
         functools.reduce(
-            operator.matmul, hmatrices).rows()
+            operator.matmul, hmatrices).rows
     )

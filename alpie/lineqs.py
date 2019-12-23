@@ -105,7 +105,7 @@ def gaussInversed(matrix):
     matrix = matrices.SquareMatrix.ensure(matrix)
     new = matrices.SquareMatrix.empty()
 
-    for vector in matrix.identityMask.rows():
+    for vector in matrix.identityMask.rows:
         new.data.append(
             gaussElimination(
                 matrices.AugmentedMatrix(
@@ -126,7 +126,7 @@ def simpleIterationCoefficients(matrix):
     B = matrices.PlainMatrix.empty()
 
     for aii, aij, bi in zip(
-        matrix.coeffs.diagonal, matrix.coeffs.rows(), matrix.eqs.rows()
+        matrix.coeffs.diagonal, matrix.coeffs.rows, matrix.eqs.rows
     ):
         A.data.append([-el / aii for el in aij])
         B.data.append([bi[0] / aii])
@@ -185,7 +185,7 @@ def seidelIteration(matrix, initial=None, accuracy=1e-10, accuracyfunc=None):
     def iterator(C, d, x):
         newX = matrices.PlainMatrix.empty()
         # Calculate each equation apart
-        for row, b in zip(C.rows(), d.elements):
+        for row, b in zip(C.rows, d.elements):
             newX.data.append([b + sum(
                 [cn * xn for cn, xn in zip(row, x.elements)]
                 # No x was calculated yet

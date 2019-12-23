@@ -462,12 +462,14 @@ class PlainMatrix(ListMatrix):
                 "You're trying to create not two dimensional matrix")
         return super().sizedAs(dimensions)
 
+    @property
     def rows(self):
         """Generate rows.
         """
         for row in self.data:
             yield row
 
+    @property
     def columns(self):
         """Generate columns.
         """
