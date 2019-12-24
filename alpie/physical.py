@@ -6,6 +6,7 @@ import itertools
 import functools
 import operator
 import math
+import numbers
 
 
 def frange(start, stop, step):
@@ -34,6 +35,52 @@ class Space():
 
     def size(self):
         raise NotImplemented
+
+    @staticmethod
+    def euclidean(coords1: tuple, coords2: tuple):
+        """Measure distance between given coordunates in euclidean space.
+        """
+        return sum([
+            (a - b) ** 2
+            for a, b
+            in zip(coords1, coords2)]) ** .5
+
+
+class Point:
+    """Represents a single point in any coordinates system.
+    """
+
+    def __init__(self, coordinates: tuple):
+        self.coordinates = coordinates
+
+    def __iter__(self):
+        for coord in self.coordinates:
+            yield coord
+
+    def lengthTo(self, other, metric=Space.euclidean):
+        """Measure distance from current point to the given one using given
+        metric function.
+        """
+        return metric(
+            tuple(self), tuple(other))
+
+    def __mul__(self, other):
+        if not isinstance(other, numbers.Number):
+            raise TypeError("Second multiplier should be number.")
+
+        return Point(tuple(x * other for x in self.coordinates))
+
+    def __add__(self, other):
+        if not isinstance(other, type(self)):
+            raise TypeError("Second multiplier should be Point.")
+
+        return Point(tuple(a + b for a, b in zip(self, other)))
+
+    def __sub__(self, other):
+        if not isinstance(other, type(self)):
+            raise TypeError("Second multiplier should be Point.")
+
+        return Point(tuple(a - b for a, b in zip(self, other)))
 
 
 class Rectangle(Space):
@@ -70,13 +117,13 @@ class Square(Rectangle):
     """A multidimensional square.
     """
 
-    def __init__(self, start: tuple, size: float, detalization=1e-3):
+    def __init__(self, start: Point, size: float, detalization=1e-3):
         """Creates square with coordinates:
         (start[0], start[1], ..., start[dim]) ->
             (start[0] + size, start[1] + size, ..., start[dim] + size)
         """
         self.start = start
-        self.end = tuple(x + size for x in start)
+        self.end = Point(tuple(x + size for x in start))
         self.detalization = detalization
 
 
@@ -105,7 +152,7 @@ class ClosedHyperball(Space):
     """A multidimensional closed ball.
     """
 
-    def __init__(self, center: tuple, radius: float, detalization=1e-3):
+    def __init__(self, center: Point, radius: float, detalization=1e-3):
         """Creates ball with center in given coordinates. Your ball will have
         dimension equal to len(center).
         """
@@ -122,7 +169,7 @@ class ClosedHyperball(Space):
             if point in self
         ]
 
-    def __contains__(self, point: tuple):
+    def __contains__(self, point: Point):
         return sum(x ** 2 for x in point) <= self.radius ** 2
 
     def size(self):
@@ -137,5 +184,5 @@ class OpenedHyperball(Space):
     """A multidimensional opened ball.
     """
 
-    def __contains__(self, point: tuple):
+    def __contains__(self, point: Point):
         return sum(x ** 2 for x in point) < self.radius ** 2
