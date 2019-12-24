@@ -36,6 +36,9 @@ class Space():
     def size(self):
         raise NotImplemented
 
+    def __repr__(self):
+        return "<Physical object>"
+
     @staticmethod
     def euclidean(coords1: tuple, coords2: tuple):
         """Measure distance between given coordunates in euclidean space.
@@ -82,6 +85,12 @@ class Point:
 
         return Point(tuple(a - b for a, b in zip(self, other)))
 
+    def __str__(self):
+        return str(self.coordinates)
+
+    def __repr__(self):
+        return f"<Point = {self}>"
+
 
 class Rectangle(Space):
     """A multidimensional rectangle.
@@ -112,6 +121,12 @@ class Rectangle(Space):
                 for a, b
                 in zip(self.start, self.end)])
 
+    def __repr__(self):
+        return (
+            f"<Rectangle start={(self.start)} end={(self.end)}"
+            f" detalization={(self.detalization)}>"
+        )
+
 
 class Square(Rectangle):
     """A multidimensional square.
@@ -125,6 +140,12 @@ class Square(Rectangle):
         self.start = start
         self.end = Point(tuple(x + size for x in start))
         self.detalization = detalization
+
+    def __repr__(self):
+        return (
+            f"<Square start={(self.start)} end={(self.end)}"
+            f" detalization={(self.detalization)}>"
+        )
 
 
 class Range(Space):
@@ -146,6 +167,9 @@ class Range(Space):
         """Continuum size of the range.
         """
         return abs(self.start - self.end)
+
+    def __repr__(self):
+        return f"<Range [{self.start}, {self.end}]>"
 
 
 class ClosedHyperball(Space):
@@ -179,6 +203,12 @@ class ClosedHyperball(Space):
             (math.pi ** (len(self.size) / 2)) / math.gamma(len(self.size) + 1)
         ) * self.radius ** len(self.size)
 
+    def __repr__(self):
+        return (
+            f"<ClosedHyperball center={(self.start)} radius={(self.radius)}"
+            f" detalization={(self.detalization)}>"
+        )
+
 
 class OpenedHyperball(Space):
     """A multidimensional opened ball.
@@ -186,3 +216,9 @@ class OpenedHyperball(Space):
 
     def __contains__(self, point: Point):
         return sum(x ** 2 for x in point) < self.radius ** 2
+
+    def __repr__(self):
+        return (
+            f"<OpenedHyperball center={(self.start)} radius={(self.radius)}"
+            f" detalization={(self.detalization)}>"
+        )
