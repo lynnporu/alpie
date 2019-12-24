@@ -2,6 +2,7 @@ import function
 import functools
 import itertools
 import operator
+import physical
 from copy import deepcopy
 
 
@@ -65,3 +66,19 @@ def newton(xarr: list, yarr: list) -> function.Function:
         return result
 
     return function.Function(interpolation)
+
+
+def bezierf(obj1, obj2):
+    """Returns single parameter function "t", which provides bezier
+    interpolation between two objects. It might be two points or two functions
+    from previous bezier interpolations.
+    """
+
+    def interpolator(t):
+
+        return (
+            (obj1 if isinstance(obj1, physical.Point) else obj1(t)) * t +
+            (obj2 if isinstance(obj2, physical.Point) else obj2(t)) * (1 - t)
+        )
+
+    return function.Function(interpolator)
