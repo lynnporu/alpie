@@ -11,6 +11,12 @@ class BadApproximation(Exception):
     pass
 
 
+class MaximalPrecise(Exception):
+    """When bigger accuracy cannot be reached.
+    """
+    pass
+
+
 def simpleIteration(
     f: function.Function, a, b, initial, accuracy=1e-6
 ):
@@ -110,12 +116,19 @@ def gradientDescent(
             else:
                 break
 
+            if alpha < accuracy:
+                raise MaximalPrecise
+
         return calc
 
     while True:
 
-        calc = step(
-            phi(**initial.ofNames(variables)), initial)
+        try:
+            calc = step(
+                phi(**initial.ofNames(variables)), initial)
+
+        except MaximalPrecise:
+            break
 
         if max(abs(calc - initial)) < accuracy:
             break
