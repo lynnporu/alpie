@@ -86,7 +86,8 @@ def bezierlinear(obj1, obj2):
 
 
 def lsqfit(
-    model: function.RnFunction, sequence: function.ScalarVector, accuracy=1e-6
+    model: function.RnFunction, sequence: function.ScalarVector, initial=None,
+    accuracy=1e-6
 ):
     """Search coefficients for a given model, using given sequence of data.
 
@@ -96,7 +97,9 @@ def lsqfit(
     Sequence should contain some objects that can be unpacked to
     [(x,y), (x,y), ...]. A physical.Point class is the best choice.
 
-    Coefficients will be found with given accuracy.
+    Coefficients will be found with given accuracy, using gradient descent
+    method, which optimize the function. You can also set a initial, if
+    the default one ([0, 0, ...]) dose not please you.
     """
 
     params = model.core.parameters
@@ -111,4 +114,6 @@ def lsqfit(
     S = function.RnFunction(optimize, parameters=False)
 
     return roots.gradientDescent(
-        S.grad(params[1:]), params[1:], [0] * len(params), accuracy=accuracy)
+        S.grad(params[1:]), params[1:],
+        accuracy=accuracy,
+        initial=tuple(initial) if initial else [0] * len(params))
