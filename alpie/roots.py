@@ -108,7 +108,7 @@ def gradientDescent(
             calc = phigr(**vector.ofNames(variables)) * alpha + vector
             new = phi(**calc.ofNames(variables))
 
-            if new == 0:
+            if new <= accuracy:
                 break
 
             if new >= prev:

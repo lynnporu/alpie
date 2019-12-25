@@ -3,6 +3,7 @@ import functools
 import itertools
 import operator
 import physical
+import roots
 from copy import deepcopy
 
 
@@ -68,7 +69,7 @@ def newton(xarr: list, yarr: list) -> function.Function:
     return function.Function(interpolation)
 
 
-def bezierf(obj1, obj2):
+def bezierlinear(obj1, obj2):
     """Returns single parameter function "t", which provides bezier
     interpolation between two objects. It might be two points or two functions
     from previous bezier interpolations.
@@ -82,3 +83,32 @@ def bezierf(obj1, obj2):
         )
 
     return function.Function(interpolator)
+
+
+def lsqfit(
+    model: function.RnFunction, sequence: function.ScalarVector, accuracy=1e-6
+):
+    """Search coefficients for a given model, using given sequence of data.
+
+    Given function should take "x" as the first parameter and coefficients for
+    the rest: f(x, a, b, c) = ax^2 + bx + c.
+
+    Sequence should contain some objects that can be unpacked to
+    [(x,y), (x,y), ...]. A physical.Point class is the best choice.
+
+    Coefficients will be found with given accuracy.
+    """
+
+    params = model.core.parameters
+
+    def optimize(**kwargs):
+        return sum([
+            (y - model(
+                **{params[0]: x, **kwargs})) ** 2
+            for x, y
+            in sequence])
+
+    S = function.RnFunction(optimize, parameters=False)
+
+    return roots.gradientDescent(
+        S.grad(params[1:]), params[1:], [0] * len(params), accuracy=accuracy)
