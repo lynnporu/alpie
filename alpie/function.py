@@ -12,6 +12,11 @@ from copy import deepcopy
 
 class Executable():
     """Executable code.
+
+    Properties:
+        parameters: List of names of parameters.
+        executable: Real executable Python function.
+
     """
 
     def __init__(self, fn):
@@ -27,9 +32,17 @@ class Executable():
         return hash(self.executable)
 
     def __repr__(self):
-        return f"<Executable params=({', '.join(self.parameters)})>"
+        if self.parameters is False:
+            return "<Executable params=[...]>"
+
+        else:
+            return f"<Executable params=({', '.join(self.parameters)})>"
 
     def __call__(self, **kwargs):
+
+        # If self.parameters are not defined, just don't check it.
+        if self.parameters is False:
+            return self.executable(**kwargs)
 
         if not all([names in kwargs for names in self.parameters]):
             raise TypeError(
@@ -55,11 +68,20 @@ class RnFunction():
     """Multidimensional function.
     """
 
-    def __init__(self, fn):
+    def __init__(self, fn, parameters=None):
         """Creates function from given callable object.
+        You can also pass a list of parameter names, if your function gives
+        *args as parameter, or assign it to False, if you don't want your
+        parameters to be checked at every function calling.
         """
         self.core = Executable(fn)
         self.wrappers = []
+
+        if parameters:
+            self.core.parameters = parameters
+
+        if parameters is False:
+            self.core.parameters = False
 
     @classmethod
     def ensure(cls, data):
@@ -94,7 +116,8 @@ class RnFunction():
         return initial
 
     def __deepcopy__(self, memdict):
-        new = type(self)(fn=self.core.executable)
+        new = type(self)(
+            fn=self.core.executable, parameters=self.core.parameters)
         new.wrappers = deepcopy(self.wrappers)
         return new
 
