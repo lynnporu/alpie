@@ -473,6 +473,10 @@ class ScalarVector:
         else:
             return cls(*data)
 
+    @classmethod
+    def avg(self):
+        return sum(self) / len(self)
+
 
 class FunctionalVector(ScalarVector):
     """One-dimensional container of functions.

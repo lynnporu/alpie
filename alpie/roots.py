@@ -130,7 +130,7 @@ def gradientDescent(
         except MaximalPrecise:
             break
 
-        if max(abs(calc - initial)) < accuracy:
+        if phi(**calc.ofNames(variables)) <= accuracy:
             break
 
         initial = deepcopy(calc)
